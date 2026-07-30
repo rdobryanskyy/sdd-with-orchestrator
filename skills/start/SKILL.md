@@ -8,8 +8,8 @@ description: >
   feature's pipeline stage, renders its artifacts (markdown, mermaid C4/sequence/ER, OpenAPI
   as plain YAML), and drives the pipeline by sending /sdd:<skill>
   commands back into this live session. Triggers on "start the dashboard", "open the SDD
-  dashboard", "sdd dashboard", "/sdd:start", "show the pipeline UI", "відкрий дашборд",
-  "запусти панель SDD". The sdd-dashboard MCP server auto-starts at session open (via .mcp.json),
+  dashboard", "sdd dashboard", "/sdd:start", "show the pipeline UI", "open the dashboard",
+  "launch the SDD panel". The sdd-dashboard MCP server auto-starts at session open (via .mcp.json),
   resolves the project from CLAUDE_PROJECT_DIR, binds its loopback HTTP listener, and writes the
   dashboard URL (with a per-session capability token) to ~/.claude/sdd-dashboard/current.url —
   so start's job is simply to READ that file and print the URL. No MCP tool call, no channel

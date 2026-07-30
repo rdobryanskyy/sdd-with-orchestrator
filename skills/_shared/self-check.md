@@ -7,13 +7,13 @@
 > phrase **structural self-check** at the place where the contract is satisfied — that is the
 > greppable evidence the validator enforces.
 
-## TL;DR (короткий вступ українською)
+## TL;DR (short English introduction)
 
-Кожен скіл перед хендофом перевіряє власний артефакт **з диска** за іменованим чеклістом.
-Знайшов проблему → виправив і перевірив ще раз (максимум 2 цикли). Не зміг виправити →
-чесно каже користувачу, ніколи мовчки. Результат — один рядок у хендофі: «self-check: 6/6 pass».
-Скіли з важкими верифікаторами (critic, reviewer, drift-check, mermaid-check, GATE) не дублюють
-роботу — їхній верифікатор і **є** self-check; вони додають лише структурні пункти, які він не покриває.
+Before the handoff, every skill checks its own artifact **from disk** against a named checklist.
+If it finds a problem, it fixes it and checks again (at most two cycles). If it cannot fix it, it
+tells the user honestly—never silently. The result is one handoff line: “self-check: 6/6 pass”.
+Skills with substantial validators (critic, reviewer, drift-check, mermaid-check, GATE) do not
+duplicate work: their validator **is** the self-check; they add only structural items it does not cover.
 
 ## The contract (five steps)
 

@@ -8,7 +8,7 @@ description: >
   point before planning or design proceeds — so two engineers can't reasonably build
   different things from the same spec. Triggers on "clarify {slug}", "find ambiguities in
   {slug}", "is the spec ready", "sharpen the spec", "/sdd:clarify {slug}",
-  "прояснити специфікацію", "знайди неоднозначності {slug}", "чи готова специфікація".
+  "clarify the specification", "find ambiguities in {slug}", "is the specification ready".
   Re-reads the spec, dispatches a clean-context devil's-advocate subagent to list where the
   spec forks, then for each ambiguity runs AskUserQuestion to RESOLVE it (tighten §1/§5/§6
   in place) or DEFER it (→ §8 Open questions with owner+due). Output: an updated

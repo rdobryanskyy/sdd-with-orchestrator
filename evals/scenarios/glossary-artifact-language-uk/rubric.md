@@ -7,11 +7,11 @@ the skill honouring the setting.
 PASS requires ALL of:
 
 1. `docs/features/rate-limit-bump/CONTEXT.md` exists with **English structure**: the `## Glossary`
-   heading verbatim (never «Глосарій»), no other Ukrainian/translated headings anywhere in the
+   heading verbatim (never “Glossary”), no other Ukrainian/translated headings anywhere in the
    file, and English frontmatter keys+values (`status: Living`, `updated_at: <date>`).
 2. Both terms (`quota window`, `burst credit`) appear under `## Glossary`, one line each in the
    `- <term> — <definition>.` shape, and **each definition's prose is Ukrainian** (Cyrillic carries
-   the meaning — e.g. «ковзний 60-секундний інтервал…», not the English sentence copied verbatim).
+   the meaning—for example, “a rolling 60-second interval…”—not the English sentence copied verbatim).
    The `quota window` entry keeps a NOT-boundary (`NOT` token or an equivalent Ukrainian boundary
    clause naming the billing period).
 3. No `<!-- … -->` template comments are copied into the written file, in any language.

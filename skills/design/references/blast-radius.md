@@ -1,6 +1,6 @@
 # Blast-radius heuristic — when an architectural decision becomes ADR-worthy
 
-> **TL;DR (UA).** *Blast radius* — «масштаб удару»: наскільки боляче буде передумати рішення через 3 місяці. Три критерії: (1) переробка ≥3 днів (незворотнє); (2) бачать ≥2 модулі; (3) є чесна альтернатива. **2 з 3 → ADR.** 0 — inline у sad.md. Очікувано 5–12 ADR на M-функцію.
+> **TL;DR.** *Blast radius* measures how painful it will be to reverse a decision in three months. The three criteria are: (1) rework takes ≥3 days (irreversible); (2) ≥2 modules see it; (3) a legitimate alternative exists. **2 of 3 → ADR.** 0 stays inline in `sad.md`. Expect 5–12 ADRs for an M-size feature.
 
 The skill makes 15–30 decisions per pass. Without a gate you'd either spawn one ADR per decision (noise — kills the genre) or zero (loses the *why* of the important ones). The blast-radius heuristic picks the right 5–12. It is design's per-skill Socratic gate, run on every **Approved** decision (see [`./socratic.md`](./socratic.md)).
 

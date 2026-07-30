@@ -1,6 +1,6 @@
 # C4 Mermaid syntax — quick reference for sad.md §3 and §5
 
-> **TL;DR (UA).** C4 — 4 рівні діаграм як zoom на мапі. **L1 Context** (система як чорний ящик + актори + зовнішні системи) = §3 SAD. **L2 Container** (внутрішня декомпозиція: модулі, сервіси, БД, черги) = §5 SAD. L3/L4 — поза межами цього skill. *Кордон довіри* (`Container_Boundary`) — лінія, за якою дані не довіряєш без перевірки.
+> **TL;DR.** C4 has four diagram levels, like zooming a map. **L1 Context** (the system as a black box, plus actors and external systems) = SAD §3. **L2 Container** (internal decomposition: modules, services, databases, queues) = SAD §5. L3/L4 are out of scope for this skill. A *trust boundary* (`Container_Boundary`) is the line beyond which data is not trusted without validation.
 
 design emits C4 Level 1 (Context) in §3 and Level 2 (Container) in §5 as Mermaid blocks inline in `sad.md`. L3 Component and L4 Code are deliberately out of scope — request a separate diagramming pass if you need them. Mermaid renders natively in GitHub and in Obsidian.
 

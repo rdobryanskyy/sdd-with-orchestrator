@@ -5,18 +5,19 @@
 > **read** the declaration and gate their own output by it. Each keeps a one-line pointer here and its
 > own delta — the taxonomy and the gating table live **only** in this file, never duplicated per skill.
 
-## TL;DR (короткий вступ українською)
+## TL;DR (short English introduction)
 
-«Таргет-сёрфейс» (target surface) — це **що саме ми будуємо** для фічі: бекенд-сервіс, веб-фронтенд,
-мобільний застосунок, CLI тощо — «різні речі». Раніше плагін мовчазно припускав один зріз
-(сервіс + його HTTP-контракт), а фронт жив як «зовнішній споживач». Тепер `design` **явно обирає**
-поверхні на етапі архітектури, записує їх у `sad.md` → frontmatter `target_surfaces: [...]`, і всі
-наступні етапи **читають** цей вибір (а не передеривовують щоразу), щоб увімкнути саме свої
-поверхне-специфічні артефакти: UI-архітектурні ADR, шар задач `ui`, фронтові рівні тестів,
-UI-орієнтовані flow-діаграми, правильну форму `api`-контракту.
+A “target surface” is **what we are building** for a feature: a backend service, web frontend,
+mobile app, CLI, and so on—distinct things. Previously, the plugin implicitly assumed one slice
+(a service and its HTTP contract), while the frontend was treated as an external consumer. Now
+`design` **explicitly selects** surfaces during architecture work, records them in `sad.md` frontmatter
+as `target_surfaces: [...]`, and every later stage **reads** that selection instead of re-deriving it.
+This activates surface-specific artifacts: UI architecture ADRs, the `ui` task layer, frontend test
+levels, UI-oriented flow diagrams, and the appropriate form of the `api` contract.
 
-Поверхня прив'язана до C4: **поверхня = контейнер C4, який фіча вводить або володіє ним**. Це не нове
-поняття — плагін уже говорить мовою C4 у §5 SAD; тут лише робимо вибір контейнерів **явним і типізованим**.
+A surface is tied to C4: **a surface is a C4 container that the feature introduces or owns**. This is
+not a new concept—the plugin already uses C4 in SAD §5; this merely makes the container choice
+**explicit and typed**.
 
 ---
 

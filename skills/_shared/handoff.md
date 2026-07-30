@@ -9,18 +9,15 @@
 Running under Codex CLI or Cursor? The `/clear` and `/sdd:<next>` forms map to the host tool's
 equivalents per [`tool-adapters.md`](./tool-adapters.md).
 
-## TL;DR (короткий вступ українською)
+## TL;DR (short English introduction)
 
-Кожен крок (skill) наприкінці **завжди** друкує однаковий хендоф-блок із трьох секцій:
+Every skill always prints the same three-section handoff block at the end:
 
-1. **What I did** — що стадія зробила + який коміт запропонувала (не змушуй гортати вгору).
-2. **Review before continuing** — посилання на файли, які стадія створила/змінила і які треба
-   глянути на цьому геті (реальні `docs/features/<slug>/…` шляхи — клікабельні/копіювані).
-3. **Run next** — спершу `/clear` (обов'язково для forward-переходу — наступна стадія перечитує
-   все з диска), потім наступна команда `/sdd:<next> <slug>` у **fenced-блоці** (копіюється в один
-   клік) + альтернатива-пропуск, якщо вона є.
+1. **What I did** — what the stage accomplished and which commit it proposed (do not make the user scroll up).
+2. **Review before continuing** — links to files the stage created or changed that need review at this gate (real, clickable/copyable `docs/features/<slug>/…` paths).
+3. **Run next** — first `/clear` (mandatory for a forward transition so the next stage re-reads everything from disk), then the next `/sdd:<next> <slug>` command in a **fenced block** (copyable in one click), plus a skip alternative when one exists.
 
-Це прибирає головний біль: «погано виводить, незручно копіювати і перевіряти».
+This prevents the main frustration: output that is hard to copy and review.
 
 ---
 
