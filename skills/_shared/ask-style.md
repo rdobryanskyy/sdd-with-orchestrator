@@ -10,6 +10,11 @@
 > explanatory rule below is unchanged at every depth** — even a single easy-level question is glossed
 > and explained in full. Depth tunes the count; it never licenses a dry question.
 
+> **Orchestrated runs.** Under `/sdd:orchestrate` the reader of every question is the orchestrator,
+> not a human — the runner returns it as `SDD_QUESTIONS` ([`orchestration.md`](./orchestration.md)). The
+> shape and the explanatory rule below apply **unchanged**: the orchestrator did not see the runner's
+> context either, so a dry question is just as unanswerable.
+
 ## The one rule that matters most
 
 **Never ask dryly.** The most common failure is a terse, jargon-dense question — a few words plus acronyms, no context — that forces the user to already know the project to answer. Fix it two ways, every time:

@@ -22,7 +22,7 @@ Completeness (coverage of every AC) **does not depend** on the level—easy stil
 
 A consuming skill resolves the level once, at the top of its run, in this precedence (highest wins):
 
-1. **A `--depth=easy|medium|hard` argument** passed on the invocation, if present — silent, no question.
+1. **A `--depth=easy|medium|hard` argument** passed on the invocation, if present — silent, no question. (`/sdd:orchestrate` always passes it — `orchestrator_depth` — so an orchestrated stage never asks the depth question; every *other* question at that depth goes to the orchestrator, not a human.)
 2. **The opening `AskUserQuestion`** — ONE depth-selection question, phrased per [`ask-style.md`](./ask-style.md) (explanatory + every term glossed). Its **default option** (the «(Recommended)» first option) is:
    - the `interview_depth` value from `.claude/sdd.local.md` if that file exists and sets it, else
    - **medium**.

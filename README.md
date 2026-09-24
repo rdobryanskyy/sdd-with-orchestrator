@@ -1,8 +1,9 @@
 # SDD — Spec-Driven Development for Claude Code
 
 A self-contained Claude Code plugin that carries a feature from a one-line idea to
-**reviewed, verified, shipped** code through **19 atomic, stack-agnostic skills** and a
-**TDD implementation engine** — with a living roadmap above the per-feature flow.
+**reviewed, verified, shipped** code through **20 atomic, stack-agnostic skills** and a
+**TDD implementation engine** — with a living roadmap above the per-feature flow, and an
+**orchestrator** that can drive the whole thing for you from a plain-language description.
 
 Every skill is Socratic (it walks decisions with you, it doesn't dump a wall of output),
 gated (a stage hard-refuses when its prerequisite artifact is missing), and stack-agnostic
@@ -73,6 +74,14 @@ engine modes — maps to Codex / Cursor is one table:
 
 ## Start here
 
+Two ways to drive the pipeline:
+
+- **Autopilot — `/sdd:orchestrate "<what you want>"`.** You describe the feature once; the
+  orchestrator (strongest model) gives every stage to its own agent, answers every question the
+  stages ask, and stops at an open PR with a **decision ledger** you audit
+  ([details + diagrams below](#the-orchestrator-autopilot)).
+- **Hands-on — run each stage yourself**, answering its questions (the rest of this section).
+
 The flow is a straight line: **each stage writes a file the next one reads.** Run them in order
 (the diagram + table are just below).
 
@@ -116,24 +125,39 @@ context to iterate; utilities make `/clear` optional.) It looks like this:
 
 There are three kinds of skill. Most of your time is the **backbone** — a straight line you
 walk in order. A few are **utilities** you call whenever you need them. Two **close the loop**
-after the code is written.
+after the code is written. On top sits one optional **orchestrator** (`orchestrate`) that walks all
+of it for you — every stage in its own agent, every decision made by the orchestrator. Dashed
+boxes are the optional stages the route may skip when their N/A condition holds.
 
 ```mermaid
 flowchart LR
+    OR{{"orchestrate<br/>autopilot — optional<br/>drives every stage below"}}
     IV[interview<br/>optional] -.-> S
     SV[survey<br/>once per repo] --> S
-    subgraph backbone["BACKBONE — run in order"]
+    subgraph backbone["BACKBONE — run in order (dashed = optional, skipped only when N/A)"]
         S[specify] --> CL[clarify] --> D[design] --> SQ[sequences] --> DM[data-model] --> API[api] --> T[tasks] --> PT[plan-tests] --> IM[implement]
     end
     IM --> RV[review] --> SH[ship]
+    RV -. "CHANGES REQUESTED" .-> IM
     subgraph util["UTILITIES — call anytime"]
         CS[classify-size]
         GL[glossary]
         ADR[decide-adr]
         FX[fix]
+        RM[roadmap]
     end
     CL -.-> GL -.-> D
+    S -. "promote to Now" .-> RM
+    SH -. "move to Shipped" .-> RM
     SH --> done([shipped: PR + changelog])
+    OR ==> SV
+    OR ==> backbone
+    OR ==> RV
+    OR ==> SH
+    classDef optional stroke-dasharray: 5 5
+    class CL,SQ,DM,API,PT optional
+    classDef orch fill:#fff4d6,stroke:#b8860b,stroke-width:2px
+    class OR orch
 ```
 
 ### Step 0 — survey (once per repo, before the backbone)
@@ -183,6 +207,185 @@ end: a reviewed, verified change with a changelog and an open PR — merging to 
   criteria (regression / ambiguous AC / uncovered gap), pin it with a failing test, apply the
   minimal fix through the same gate `implement` runs, then patch the spec and write a fix record
   under `_fixes/`. Works on a repo with no specs at all (fixes code-first, recommends `survey`).
+
+## The orchestrator (autopilot)
+
+`/sdd:orchestrate` runs the **whole pipeline from one description**. The orchestrator is the main
+session running on the strongest model (`opus`, `effort: max`); it is the **only decision-maker**.
+Every stage runs in its own fresh **`stage-runner`** agent, which follows that stage's `SKILL.md`
+unchanged — but instead of asking *you*, it hands every question and every sub-agent it needs **up**
+to the orchestrator. The orchestrator answers, runs the sub-agents, routes to the next stage, loops
+review → implement, and writes every decision with its grounding into a **decision ledger**
+(`docs/features/<slug>/_orchestrator/run.md`).
+
+```text
+/sdd:orchestrate "Let fleet customers export their monthly mileage report as CSV from the portal"
+/sdd:orchestrate mileage-export --brief=docs/tickets/FLEET-412.md --depth=hard
+/sdd:orchestrate mileage-export "…" --until=tasks        # plan-only: stop before any code
+/sdd:orchestrate mileage-export --resume                 # continue a stopped run from run.md
+```
+
+### Who does what
+
+```mermaid
+flowchart LR
+    U([You: a plain-language brief]) --> OR
+    OR{{"ORCHESTRATOR<br/>orchestrate skill · opus · effort max<br/>the only decision-maker"}}
+    OR <--> LG[("_orchestrator/run.md<br/>brief · stage log<br/>decision ledger")]
+    OR -- "one fresh agent per stage<br/>(= the /clear)" --> SR["stage-runner<br/>runs skills/STAGE/SKILL.md<br/>verbatim, ORCHESTRATED MODE"]
+    SR -- "SDD_QUESTIONS ⇄ SDD_ANSWERS" --> OR
+    SR -- "SDD_DISPATCH ⇄ SDD_REPORTS" --> OR
+    SR -- "SDD_STAGE_DONE + handoff" --> OR
+    SR --> ART[("docs/features/SLUG<br/>spec · sad · adr · data-model<br/>contracts · tasks.json")]
+    OR -- "runs every dispatch<br/>clean context" --> J["judgment agents<br/>critic · devils-advocate · researcher<br/>strategist · analyst · reviewer · explorer"]
+    J -- "reports, verbatim" --> OR
+    OR -- "implement: engine lead,<br/>per task" --> X["execution agents<br/>test-author (RED) →<br/>implementer (GREEN · gate)"]
+    X --> CODE[("code + tests<br/>commits with SDD-Task / SDD-AC")]
+    OR --> PR([open PR — never merged])
+    classDef orch fill:#fff4d6,stroke:#b8860b,stroke-width:2px
+    class OR orch
+```
+
+Why this split: a sub-agent **cannot spawn sub-agents**, so the lead (the orchestrator) owns every
+dispatch; the judgment agents keep their clean context (the runner that wrote a draft never grades
+it); and each stage starts empty and re-reads its inputs from disk, so no stage's chatter leaks into
+the next. The stage skills are **not** rewritten — the same 19 skills still work hands-on.
+
+### One stage, end to end (the relay loop)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as Orchestrator
+    participant L as run.md (ledger)
+    participant R as stage-runner (design)
+    participant C as critic
+    participant D as docs/features/slug
+    O->>R: ORCHESTRATED MODE · stage=design · --depth=medium · brief + run.md paths
+    R->>D: read spec.md, architecture-map.md, CONTEXT.md
+    R-->>O: SDD_QUESTIONS (target surfaces? module boundary?) with full options
+    O->>D: grep only the cited sections
+    O->>L: D-021, D-022 + grounding (or UNGROUNDED)
+    O->>R: SDD_ANSWERS (resume the same agent)
+    R->>D: write + commit the resolved section
+    Note over R: Socratic walk continues section by section<br/>(more SDD_QUESTIONS rounds, one commit per section)
+    R-->>O: SDD_DISPATCH critic (full self-contained prompt)
+    O->>C: dispatch sdd:critic (clean context)
+    C-->>O: cited findings
+    O->>R: SDD_REPORTS (verbatim)
+    R-->>O: SDD_QUESTIONS (resolve finding F4?)
+    O->>L: D-023
+    O->>R: SDD_ANSWERS
+    R->>D: apply the critic resolution, finalise sad.md + adr/*, commit
+    R-->>O: SDD_STAGE_DONE (files, commits[], next=sequences, handoff block)
+    O->>O: verify every commit in git log · tree clean
+    O->>L: stage log row · route check against .route
+```
+
+If the host can't resume a finished agent, the orchestrator **replays**: a fresh runner gets the
+answer sheet so far, resumes from what the stage already wrote and committed (never re-bootstrapping
+or re-committing), applies known answers by their stable question id, and stops only at the next
+new one.
+
+### The whole run
+
+```mermaid
+flowchart TD
+    B([brief]) --> P["preflight: clean tree · slug · branch sdd/slug<br/>then bootstrap commit: brief + run.md"]
+    P --> M{architecture map<br/>present and fresh?}
+    M -- no --> SV[survey]
+    M -- yes --> SP
+    SV --> GF{greenfield?}
+    GF -- yes --> SC["implement _scaffold<br/>skeleton builds + boots"] --> SP
+    GF -- no --> SP[specify<br/>size + route decided]
+    SP --> Q1{clarify N/A?<br/>zero open questions}
+    Q1 -- "no / route full" --> CL[clarify] --> GQ{"terms missing<br/>from CONTEXT.md?"}
+    GQ -- yes --> GL[glossary] --> DE
+    GQ -- no --> DE
+    Q1 -- "yes (quick: auto · standard: orchestrator decides, ledgered)" --> DE
+    DE[design<br/>surfaces · C4 · ADRs] --> Q2{sequences N/A?}
+    Q2 -- no --> SQ[sequences] --> Q3
+    Q2 -- yes --> Q3{data-model N/A?<br/>no schema change}
+    Q3 -- no --> DM[data-model] --> Q4
+    Q3 -- yes --> Q4{api N/A?<br/>no contract change}
+    Q4 -- no --> AP[api] --> TK
+    Q4 -- yes --> TK[tasks]
+    TK --> PT[plan-tests<br/>inline on quick]
+    PT --> UN{"--until reached?<br/>(checked after every stage)"}
+    UN -- yes --> STOP1([stop: plan-only run])
+    UN -- no --> IM[implement<br/>orchestrator = engine lead]
+    IM --> RV[review<br/>reviewer in clean context]
+    RV --> V{verdict}
+    V -- PASS --> SH["ship<br/>verify it runs · changelog committed<br/>PR command proposed"]
+    V -- "CHANGES REQUESTED<br/>(findings: default Fix now)" --> LC{fix rounds left?<br/>orchestrator_max_review_loops}
+    LC -- yes --> FX["fix round:<br/>findings → fix tasks in tasks.json → RED/GREEN"] --> RV
+    LC -- no --> STOP2([stop: open findings reported])
+    SH --> OP{orchestrator_open_pr?}
+    OP -- "true" --> PU["orchestrator: push branch<br/>+ open PR (never merge)"] --> RP
+    OP -- "false" --> RP([final report<br/>UNGROUNDED decisions first · open questions · PR])
+```
+
+Every stage node above is a separate `stage-runner` agent. Any stage can also end in a **stop** —
+a gate that blocks twice, a red that survives escalation with `stop_on_red: true`, an ungrounded
+question your escalate policy routes to you, a dirty tree, or anything destructive (force-push,
+history rewrite) — and the report gives the exact `--resume` command.
+
+### Implement: the orchestrator leads the TDD engine
+
+```mermaid
+flowchart LR
+    A["stage-runner<br/>phase=plan<br/>detect commands · DAG · lanes"] -->|run-plan| O{{Orchestrator}}
+    O --> PH{next Kahn phase<br/>ready tasks}
+    PH -->|"parallel only if eligible<br/>(worktree per task, lanes serialized)"| TA[test-author<br/>RED + quoted failing line]
+    TA --> CL{first run}
+    CL -- "BAD red / false-pass" --> TA
+    CL -- "GOOD red" --> IM[implementer<br/>GREEN · REFACTOR · gate]
+    IM --> VF[orchestrator re-runs the test<br/>evidence, not 'should pass']
+    VF -- green --> CM["commit in dep order<br/>SDD-Task / SDD-AC trailers"]
+    VF -- red --> ES["escalation ladder:<br/>retry → stronger model → split task<br/>→ wrong AC? (grounded: via clarify + re-sync · else: rollback)"]
+    ES --> IM
+    CM --> PH
+    PH -->|all done / stop_on_red| F["stage-runner<br/>phase=finalize<br/>tracker · summary · handoff"]
+```
+
+### How the orchestrator decides
+
+```mermaid
+flowchart TD
+    Q[question from a stage-runner] --> G{grounded?}
+    G -- "brief" --> A1[answer + cite]
+    G -- "earlier ledger row / Accepted ADR" --> A1
+    G -- "upstream artifact · architecture map · CONTEXT.md" --> A1
+    G -- "skill's (Recommended) fits all of the above" --> A1
+    G -- nothing grounds it --> K{kind}
+    K -- "technical, reversible" --> A2["decide by tie-breakers:<br/>reversible › smaller scope › no new dependency › repo precedent<br/>ledger: UNGROUNDED"]
+    K -- "technical, irreversible" --> E1{escalate = hard?}
+    K -- "business rule" --> E2{escalate = business or hard?}
+    E1 -- no --> A3["most conservative option<br/>ledger: UNGROUNDED"]
+    E2 -- no --> A4["most conservative option<br/>ledger: UNGROUNDED — BUSINESS<br/>listed first in the final report"]
+    E1 -- yes --> H[ask you]
+    E2 -- yes --> H
+    H -- "no answer (headless)" --> S([stop — never invent the rule])
+```
+
+Settings (in `.claude/sdd.local.md`): `orchestrator_depth` (default `medium` — `hard` costs tokens,
+not your attention, since the orchestrator answers), `orchestrator_escalate` (`none` — decide
+everything and flag; `business` — ask you for ungrounded business rules; `hard` — also for
+ungrounded irreversible technical calls), `orchestrator_max_review_loops` (default `2`),
+`orchestrator_open_pr` (default `true` — the orchestrator pushes and opens the PR after `ship`;
+`false` prints the command instead). The full
+rulebook: [`skills/orchestrate/references/decision-policy.md`](./skills/orchestrate/references/decision-policy.md);
+the relay contract: [`skills/_shared/orchestration.md`](./skills/_shared/orchestration.md).
+
+> **Review the ledger, not just the diff.** The orchestrator never invents silently: every decision
+> it could not ground is marked `UNGROUNDED` and listed first in the final report. With the default
+> `orchestrator_escalate: none` those are real product decisions made on your behalf — read them
+> before merging, or run with `--escalate=business` to be asked instead.
+
+**Model.** The `orchestrate` skill pins `model: opus` + `effort: max` — the strongest tier alias
+every Claude Code build resolves. If your account has the Mythos tier, change that one frontmatter
+line in `skills/orchestrate/SKILL.md` to `model: fable`. Stage-runners get each stage skill's own
+declared model; the judgment agents still follow `judgment_model`.
 
 ## Interview depth (easy / medium / hard)
 
@@ -324,12 +527,14 @@ Model is chosen by the **kind of work**, not by taste:
 
 | Kind of work | Model | Effort | Who |
 |---|---|---|---|
+| Orchestration (every decision in an autopilot run) | `opus` | `max` | `orchestrate` (the main session — not an agent) |
 | Judgment (spec, design, review, critique, ambiguity, strategy) | `opus` | `high` | specify, clarify, design, review · `reviewer` / `critic` / `devils-advocate` / `strategist` / `analyst` |
 | Execution (write tests, write code) | `sonnet` | `medium` → `high` on escalation | `test-author`, `implementer` |
 | Research / gathering (+ web) | `sonnet` | `medium` | `researcher` (competitive / adjacent-solution research) |
 | Search / scan / derivation | `haiku` / `inherit` | `low` / `medium` | `explorer`; data-model, api, sequences, tasks |
+| Running one stage for the orchestrator | the stage skill's own `model` (passed per dispatch) | `high` | `stage-runner` |
 
-The nine agents (`agents/`): **explorer** (brownfield scan), **test-author** (failing tests),
+The ten agents (`agents/`): **stage-runner** (runs one stage for the orchestrator), **explorer** (brownfield scan), **test-author** (failing tests),
 **implementer** (makes them pass), **reviewer** (independent review), **critic**
 (coherence critique), **devils-advocate** (ambiguity + failure-mode hunt), **researcher**
 (competitive / web research), **strategist** (three strategic approaches), **analyst**
@@ -388,6 +593,10 @@ judgment_model: opus       # opus | fable — one switch for all judgment agents
 effort_test_author: medium # raised to high on escalation / for L-XL features
 effort_implementer: medium
 effort_reviewer: high
+orchestrator_depth: medium # easy | medium | hard — the --depth /sdd:orchestrate passes to every Q&A stage
+orchestrator_escalate: none # none | business | hard — which UNGROUNDED questions go back to you
+orchestrator_max_review_loops: 2 # review → implement fix rounds before the orchestrator stops
+orchestrator_open_pr: true # push + open the PR after ship (false = print the command)
 ```
 
 Command detection is a stack-agnostic cascade: settings override → Makefile targets →
@@ -395,6 +604,9 @@ Command detection is a stack-agnostic cascade: settings override → Makefile ta
 Docker probe for the integration tier.
 
 ## Quick start (idea → shipped)
+
+**Autopilot:** `/sdd:orchestrate "<what you want>"` — one command, the sequence below is run for you
+(see [The orchestrator](#the-orchestrator-autopilot)). **Hands-on:**
 
 The argument every stage takes is the **feature slug** — a kebab-case name you make up once at
 the start (here `checkout-discounts`). It becomes the folder every artifact lands in —
@@ -485,9 +697,10 @@ skipped. The ones you're most likely to meet:
 .codex-plugin/    Codex CLI plugin manifest (+ .agents/plugins/marketplace.json — its self-marketplace)
 .cursor-plugin/   Cursor plugin manifest (skills/ + agents/ auto-discovered from the root)
 install.sh        Codex CLI / Cursor installer — copies the subtree, prefixes skill names, generates functional agents
-agents/           explorer, test-author, implementer, reviewer, critic, devils-advocate, researcher, strategist, analyst
+agents/           stage-runner, explorer, test-author, implementer, reviewer, critic, devils-advocate, researcher, strategist, analyst
 scripts/          validate_plugin.py (CI gate: manifests + skill/agent frontmatter + the consistency invariants — links resolve, /sdd: form, handoff block, single-source taxonomy, no _shared orphans)
-skills/_shared/   canonical socratic-loop / critic / size-matrix / ask-style / interview-depth / diagram-presentation / surfaces / handoff / tool-adapters (referenced, not duplicated)
+skills/_shared/   canonical socratic-loop / critic / size-matrix / ask-style / interview-depth / diagram-presentation / surfaces / handoff / tool-adapters / orchestration (referenced, not duplicated)
+skills/orchestrate/ the autopilot: SKILL.md + references/decision-policy.md + references/implement-lead.md + templates/run.md
 skills/<name>/    SKILL.md spine + references/ (heavy detail) + templates/ (output scaffolds)
 .mcp.json         declares the sdd-dashboard MCP server (auto-starts at session open; opt-in via dashboard_enabled)
 server/           the dashboard MCP server (Bun + TypeScript): server.ts (MCP stdio + Bun.serve HTTP/WS), http.ts (routing + gating, testable), state.ts (disk→pipeline derivation), channel.ts (dashboard_* tools + command allowlist), paths.ts (docs/ scoping), frontmatter.ts (shared parser) + tests/ (bun test)
