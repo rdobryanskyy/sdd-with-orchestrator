@@ -19,6 +19,7 @@
  *   tracker in_progress/done rows    → implementing / implemented
  *   _review/review-*.md              → reviewed (latest PASS / CHANGES REQUESTED)
  *   roadmap "Shipped" row            → shipped
+ *   _visual/visual-test-*.md         → visually tested (latest VISUAL PASS / ISSUES / BLOCKED)
  */
 
 import {
@@ -30,6 +31,10 @@ import {
 import { join, extname, relative, sep } from 'path'
 import { docsDir, featuresDir, ALLOWED_EXT } from './paths.ts'
 import { frontmatter, parseList } from './frontmatter.ts'
+
+const VISUAL_SURFACES = new Set(['web-frontend', 'mobile-app', 'desktop-app', 'cli'])
+
+export type VisualVerdict = 'VISUAL PASS' | 'VISUAL ISSUES' | 'VISUAL BLOCKED'
 
 export type StageStatus = 'done' | 'skipped' | 'pending' | 'blocked'
 
@@ -50,6 +55,7 @@ export interface FeatureSummary {
   stages: Stage[]
   progress: { done: number; total: number; pct: number } | null
   reviewVerdict: 'PASS' | 'CHANGES REQUESTED' | null
+  visualVerdict: VisualVerdict | null
   surfaces: string[]
   shipped: boolean
 }
@@ -128,12 +134,35 @@ function parseTracker(text: string | null): Tracker | null {
 
 // ---- review verdict --------------------------------------------------------
 
-function latestReviewVerdict(reviewDir: string): 'PASS' | 'CHANGES REQUESTED' | null {
-  const files = lsIf(reviewDir)
-    .filter((f) => /^review-.*\.md$/.test(f))
+/**
+ * Latest record in a dated series: `<prefix>-<date>.md`, `<prefix>-<date>-r2.md`, … Sorted on the
+ * name WITHOUT the extension, so a same-day re-run (`…-r2`) orders after the first run — a plain
+ * lexical sort would put `-r2.md` before `.md` ('-' < '.').
+ */
+function latestRecord(dir: string, prefix: string): string | null {
+  const re = new RegExp(`^${prefix}-.*\\.md$`)
+  const files = lsIf(dir)
+    .filter((f) => re.test(f))
+    .map((f) => f.replace(/\.md$/, ''))
     .sort()
-  if (files.length === 0) return null
-  const latest = files[files.length - 1]
+  return files.length === 0 ? null : `${files[files.length - 1]}.md`
+}
+
+function latestVisualVerdict(visualDir: string): VisualVerdict | null {
+  const latest = latestRecord(visualDir, 'visual-test')
+  if (!latest) return null
+  const text = readIf(join(visualDir, latest)) ?? ''
+  // the frontmatter `verdict:` line is authoritative; fall back to the first literal in the body
+  const fm = /^verdict:\s*(VISUAL (?:PASS|ISSUES|BLOCKED))/im.exec(text)
+  const any = fm ?? /\bVISUAL (PASS|ISSUES|BLOCKED)\b/.exec(text)
+  if (!any) return null
+  const v = (fm ? fm[1] : `VISUAL ${any[1]}`).toUpperCase()
+  return v as VisualVerdict
+}
+
+function latestReviewVerdict(reviewDir: string): 'PASS' | 'CHANGES REQUESTED' | null {
+  const latest = latestRecord(reviewDir, 'review')
+  if (!latest) return null
   const text = readIf(join(reviewDir, latest)) ?? ''
   // "CHANGES REQUESTED" must be checked before "PASS" (a file may mention both;
   // the gate result line is what matters — prefer the explicit changes verdict).
@@ -187,6 +216,8 @@ const STAGE_DEFS: StageDef[] = [
   { id: 'implement', skill: 'implement', label: 'Implement', skippable: false },
   { id: 'review', skill: 'review', label: 'Review', skippable: false },
   { id: 'ship', skill: 'ship', label: 'Ship', skippable: false },
+  // the final visual gate — N/A (skippable) for a feature with no visual surface
+  { id: 'visual-test', skill: 'visual-test', label: 'Visual test', skippable: true },
 ]
 
 interface Signals {
@@ -199,6 +230,9 @@ interface Signals {
   hasTestPlan: boolean
   hasReview: boolean
   shipped: boolean
+  hasVisualTest: boolean
+  /** sad.md target_surfaces declares a visual surface (web / mobile / desktop / cli) */
+  visualSurface: boolean
 }
 
 /** detected: true = artifact present, false = absent, null = no disk signal (clarify). */
@@ -225,7 +259,11 @@ function detect(def: StageDef, s: Signals): boolean | null {
     case 'review':
       return s.hasReview
     case 'ship':
-      return s.shipped
+      // a visual-surface feature stays in roadmap «Now» until visual-test PASSes — a visual-test
+      // report (which only runs after ship) is itself proof that ship ran
+      return s.shipped || s.hasVisualTest
+    case 'visual-test':
+      return s.hasVisualTest
     default:
       return false
   }
@@ -244,6 +282,10 @@ function deriveStages(s: Signals): { stages: Stage[]; furthest: string } {
     if (detected[i] === true) status[i] = 'done'
     else if (i < lastDetected) status[i] = 'skipped'
     else status[i] = null as unknown as StageStatus // resolved in pass 2
+  }
+  // N/A by declaration: no visual surface → visual-test is skipped, never pending/blocked
+  for (let i = 0; i < STAGE_DEFS.length; i++) {
+    if (!status[i] && STAGE_DEFS[i].id === 'visual-test' && !s.visualSurface) status[i] = 'skipped'
   }
   // pass 2 — pending vs blocked for the not-yet-reached stages (left→right)
   for (let i = 0; i < STAGE_DEFS.length; i++) {
@@ -287,6 +329,10 @@ function readSignals(dir: string, slug: string, shipped: Set<string>): Signals {
     hasTestPlan: existsSync(join(dir, 'test-plan.md')),
     hasReview: lsIf(join(dir, '_review')).some((f) => /^review-.*\.md$/.test(f)),
     shipped: shipped.has(slug),
+    hasVisualTest: lsIf(join(dir, '_visual')).some((f) => /^visual-test-.*\.md$/.test(f)),
+    visualSurface: parseList(sad ? frontmatter(sad).target_surfaces : undefined).some((x) =>
+      VISUAL_SURFACES.has(x),
+    ),
   }
 }
 
@@ -318,6 +364,7 @@ function summarize(slug: string, shipped: Set<string>): FeatureSummary {
     stages,
     progress,
     reviewVerdict: latestReviewVerdict(join(dir, '_review')),
+    visualVerdict: latestVisualVerdict(join(dir, '_visual')),
     surfaces,
     shipped: sig.shipped,
   }
@@ -378,6 +425,7 @@ function artifactMeta(rel: string): { kind: Artifact['kind']; label: string } {
   if (rel.startsWith('adr/')) return { kind: 'markdown', label: `ADR · ${rel.slice(4)}` }
   if (rel.startsWith('_review/')) return { kind: 'markdown', label: `Review · ${rel.slice(8)}` }
   if (rel.startsWith('_fixes/')) return { kind: 'markdown', label: `Fix · ${rel.slice(7)}` }
+  if (rel.startsWith('_visual/')) return { kind: 'markdown', label: `Visual · ${rel.slice(8)}` }
   if (rel.startsWith('tasks/')) return { kind: 'markdown', label: `Task · ${rel.slice(6)}` }
   return { kind: 'markdown', label: rel }
 }
@@ -429,6 +477,7 @@ function artifactRank(rel: string): number {
   if (rel.startsWith('tasks/')) return 200
   if (rel.startsWith('_review/')) return 300
   if (rel.startsWith('_fixes/')) return 400
+  if (rel.startsWith('_visual/')) return 450
   return 500
 }
 

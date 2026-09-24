@@ -1,7 +1,7 @@
 # SDD — Spec-Driven Development for Claude Code
 
 A self-contained Claude Code plugin that carries a feature from a one-line idea to
-**reviewed, verified, shipped** code through **20 atomic, stack-agnostic skills** and a
+**reviewed, verified, shipped** code through **21 atomic, stack-agnostic skills** and a
 **TDD implementation engine** — with a living roadmap above the per-feature flow, and an
 **orchestrator** that can drive the whole thing for you from a plain-language description.
 
@@ -92,7 +92,7 @@ The flow is a straight line: **each stage writes a file the next one reads.** Ru
 ```text
 /sdd:survey                         ← once per repo: map an existing codebase, OR bootstrap an empty one
 /sdd:specify checkout-discounts     ← interviews you, writes the spec (you don't bring one)
-/sdd:design … → /sdd:implement … → /sdd:review … → /sdd:ship
+/sdd:design … → /sdd:implement … → /sdd:review … → /sdd:ship … → /sdd:visual-test
 ```
 
 Two things to know up front: **`survey` runs once per repo** — on an existing codebase it maps the
@@ -128,8 +128,8 @@ context to iterate; utilities make `/clear` optional.) It looks like this:
 ## The flow
 
 There are three kinds of skill. Most of your time is the **backbone** — a straight line you
-walk in order. A few are **utilities** you call whenever you need them. Two **close the loop**
-after the code is written. On top sits one optional **orchestrator** (`orchestrate`) that walks all
+walk in order. A few are **utilities** you call whenever you need them. Three **close the loop**
+after the code is written — the last one, `visual-test`, runs the app and tests it with computer use. On top sits one optional **orchestrator** (`orchestrate`) that walks all
 of it for you — every stage in its own agent, every decision made by the orchestrator. Dashed
 boxes are the optional stages the route may skip when their N/A condition holds.
 
@@ -141,8 +141,10 @@ flowchart LR
     subgraph backbone["BACKBONE — run in order (dashed = optional, skipped only when N/A)"]
         S[specify] --> CL[clarify] --> D[design] --> SQ[sequences] --> DM[data-model] --> API[api] --> T[tasks] --> PT[plan-tests] --> IM[implement]
     end
-    IM --> RV[review] --> SH[ship]
+    IM --> RV[review] --> SH[ship] --> VT["visual-test<br/>computer use · screenshots"]
     RV -. "CHANGES REQUESTED" .-> IM
+    VT -. "VISUAL ISSUES → one fix per Fix-now finding" .-> FX
+    FX -. "re-test" .-> VT
     subgraph util["UTILITIES — call anytime"]
         CS[classify-size]
         GL[glossary]
@@ -153,13 +155,14 @@ flowchart LR
     CL -.-> GL -.-> D
     S -. "promote to Now" .-> RM
     SH -. "move to Shipped" .-> RM
-    SH --> done([shipped: PR + changelog])
+    VT --> done([shipped + visually tested:<br/>PR + changelog + visual report])
     OR ==> SV
     OR ==> backbone
     OR ==> RV
     OR ==> SH
+    OR ==> VT
     classDef optional stroke-dasharray: 5 5
-    class CL,SQ,DM,API,PT optional
+    class CL,SQ,DM,API,PT,VT optional
     classDef orch fill:#fff4d6,stroke:#b8860b,stroke-width:2px
     class OR orch
 ```
@@ -189,17 +192,21 @@ flowchart LR
 | # | Skill | What it does | Reads → Produces |
 |---|---|---|---|
 | 10 | **review** | An **independent, clean-context** code review of the *whole* change against spec/AC + quality | the diff + `spec.md` → review record, `PASS` / `CHANGES REQUESTED` |
-| 11 | **ship** | **Verifies the feature actually runs** (not just green tests), writes the changelog, opens the PR | the reviewed change → changelog + PR (never auto-merges) |
+| 11 | **ship** | **Verifies the feature actually runs** (not just green tests), writes the changelog, proposes the PR | the reviewed change → changelog + PR (never auto-merges) |
+| 12 | **visual-test** | **The final visual gate.** A `visual-tester` agent starts the app locally and drives it with **computer use / a real browser** — every UI acceptance criterion, every UI flow, at laptop + phone sizes, plus a visual sweep (layout, states, overflow, contrast, console errors, design system). Findings come with screenshots; each is **Fix now** (→ `/sdd:fix`), Accept, or Not a bug. Auto-skipped when the feature has no visual surface | `spec.md`, `sad.md` §6, the test plan, the running app → `_visual/visual-test-<date>.md` + screenshots |
 
-`review` can bounce back to `implement` if it finds an unmet acceptance criterion. `ship` is the
-end: a reviewed, verified change with a changelog and an open PR — merging to main stays your call.
+`review` can bounce back to `implement` if it finds an unmet acceptance criterion; `visual-test`
+sends every *Fix now* visual defect to `fix` (one fix per finding, each pinned by a failing test) and
+then re-tests; the rest are Accepted (minor / cosmetic, with a reason) or Not a bug (cited spec line). `visual-test` is the end — or `ship` for a backend-only feature: a reviewed, verified,
+visually tested change with a changelog and an open PR. Merging to main stays your call.
 
-> **"We test and review, right?"** Yes — in two places. `implement` runs a **per-task gate**
+> **"We test and review, right?"** Yes — in three places. `implement` runs a **per-task gate**
 > (unit + integration + lint + vet) on every task as it goes, so each task is green before it's
 > committed. Then `review` does the **independent, whole-change** code review a human reviewer
 > would do on the PR, and `ship` **runs the feature for real** against its acceptance criteria.
 > Tests-pass happens continuously inside `implement`; the cross-cutting review + real-world
-> verification are the explicit `review` and `ship` steps.
+> verification are the explicit `review` and `ship` steps; and `visual-test` finally **looks at the
+> running app like a user** — the defects nobody wrote a test for.
 
 ### Utilities — call whenever you need them (not part of the line)
 
@@ -211,6 +218,7 @@ end: a reviewed, verified change with a changelog and an open PR — merging to 
   criteria (regression / ambiguous AC / uncovered gap), pin it with a failing test, apply the
   minimal fix through the same gate `implement` runs, then patch the spec and write a fix record
   under `_fixes/`. Works on a repo with no specs at all (fixes code-first, recommends `survey`).
+  A `visual-test` finding (`VF-n` with steps + screenshot) is a complete bug report for it.
 
 ## The orchestrator (autopilot)
 
@@ -244,6 +252,10 @@ flowchart LR
     OR -- "runs every dispatch<br/>clean context" --> J["judgment agents<br/>critic · devils-advocate · researcher<br/>strategist · analyst · reviewer · explorer"]
     J -- "reports, verbatim" --> OR
     OR -- "implement: engine lead,<br/>per task" --> X["execution agents<br/>test-author (RED) →<br/>implementer (GREEN · gate)"]
+    OR -- "after ship: runs the app<br/>with computer use" --> VTA["visual-tester<br/>screens · flows · viewports<br/>screenshots as evidence"]
+    VTA -- "VISUAL_REPORT" --> OR
+    OR -- "one fix agent<br/>per finding" --> FXA["stage-runner running fix<br/>RED → GREEN → gate<br/>fix record"]
+    FXA --> CODE
     X --> CODE[("code + tests<br/>commits with SDD-Task / SDD-AC")]
     OR --> PR([open PR — never merged])
     classDef orch fill:#fff4d6,stroke:#b8860b,stroke-width:2px
@@ -253,7 +265,7 @@ flowchart LR
 Why this split: a sub-agent **cannot spawn sub-agents**, so the lead (the orchestrator) owns every
 dispatch; the judgment agents keep their clean context (the runner that wrote a draft never grades
 it); and each stage starts empty and re-reads its inputs from disk, so no stage's chatter leaks into
-the next. The stage skills are **not** rewritten — the same 19 skills still work hands-on.
+the next. The stage skills are **not** rewritten — every one still works hands-on.
 
 ### One stage, end to end (the relay loop)
 
@@ -325,14 +337,22 @@ flowchart TD
     LC -- yes --> FX["fix round:<br/>findings → fix tasks in tasks.json → RED/GREEN"] --> RV
     LC -- no --> STOP2([stop: open findings reported])
     SH --> OP{orchestrator_open_pr?}
-    OP -- "true" --> PU["orchestrator: push branch<br/>+ open PR (never merge)"] --> RP
-    OP -- "false" --> RP([final report<br/>UNGROUNDED decisions first · open questions · PR])
+    OP -- "true" --> PU["orchestrator: push branch<br/>+ open PR (never merge)"] --> VS
+    OP -- "false" --> VS{visual surface?<br/>web · mobile · desktop · cli}
+    VS -- no --> RP
+    VS -- yes --> VTS["visual-test<br/>visual-tester drives the app"]
+    VTS --> VV{visual verdict}
+    VV -- "VISUAL PASS" --> RP([final report<br/>UNGROUNDED decisions first · open questions · PR])
+    VV -- "VISUAL BLOCKED" --> STOP3([stop: no driver / app won't start])
+    VV -- "VISUAL ISSUES" --> VL{visual rounds left?<br/>orchestrator_max_visual_loops}
+    VL -- yes --> VFX["one fix runner per Fix-now finding<br/>(+ review if a fix was wide)<br/>push to PR"] --> VTS
+    VL -- no --> STOP4([stop: open visual findings reported])
 ```
 
 Every stage node above is a separate `stage-runner` agent. Any stage can also end in a **stop** —
 a gate that blocks twice, a red that survives escalation with `stop_on_red: true`, an ungrounded
-question your escalate policy routes to you, a dirty tree, or anything destructive (force-push,
-history rewrite) — and the report gives the exact `--resume` command.
+question your escalate policy routes to you, a dirty tree, a visual test that can't run, or anything
+destructive (force-push, history rewrite) — and the report gives the exact `--resume` command.
 
 ### Implement: the orchestrator leads the TDD engine
 
@@ -351,6 +371,45 @@ flowchart LR
     CM --> PH
     PH -->|all done / stop_on_red| F["stage-runner<br/>phase=finalize<br/>tracker · summary · handoff"]
 ```
+
+### Visual test → fix: the last loop
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as Orchestrator
+    participant V as stage-runner (visual-test)
+    participant T as visual-tester
+    participant A as the app (local)
+    participant F as stage-runner (fix)
+    O->>V: ORCHESTRATED MODE · stage=visual-test · round r1
+    V->>A: start the app once (from settings / map / scripts)
+    V->>V: build the visual test matrix<br/>(every UI AC + UI flow + e2e rows)
+    V-->>O: SDD_DISPATCH visual-tester (matrix, start cmd, viewports)
+    O->>T: dispatch from the main session (has the computer-use / browser tools)
+    T->>A: drive like a user · screenshot · look
+    T-->>O: VISUAL_REPORT (R1-VF1 major ac-violation + screenshot …)
+    O->>V: SDD_REPORTS (verbatim)
+    V-->>O: SDD_QUESTIONS (visual-finding R1-VF1: Fix now / Accept / Not a bug)
+    O->>O: ledger D-041: R1-VF1 Fix now (ac-violation → never Accept)
+    O->>V: SDD_ANSWERS
+    V-->>O: SDD_STAGE_DONE (VISUAL ISSUES, report committed, Fix-now: R1-VF1)
+    loop one fix agent per Fix-now finding
+        O->>F: stage=fix · bug report = R1-VF1 verbatim
+        F->>F: RED test reproduces it → minimal GREEN → gate
+        F-->>O: SDD_STAGE_DONE (fix record, SDD-Fix commit)
+    end
+    O->>O: wide fix? → review runner · push to the PR
+    O->>V: round r2 — re-test the whole matrix
+    V-->>O: SDD_STAGE_DONE (VISUAL PASS · roadmap → Shipped · PR note)
+    O->>O: post the PR note · final report
+```
+
+The orchestrator never patches code for a visual finding: every *Fix now* goes to its own `fix`
+agent, which pins the defect with a failing test first. `orchestrator_max_visual_loops` is the
+number of fix rounds; the last re-test's findings are reported, not fixed. A round that can't run
+(`VISUAL BLOCKED` — no driver, unknown start command, no test account) stops the run instead of
+shipping a "looks fine", and the roadmap only says **Shipped** after a final `VISUAL PASS`.
 
 ### How the orchestrator decides
 
@@ -377,7 +436,7 @@ not your attention, since the orchestrator answers), `orchestrator_escalate` (`n
 everything and flag; `business` — ask you for ungrounded business rules; `hard` — also for
 ungrounded irreversible technical calls), `orchestrator_max_review_loops` (default `2`),
 `orchestrator_open_pr` (default `true` — the orchestrator pushes and opens the PR after `ship`;
-`false` prints the command instead). The full
+`false` prints the command instead), `orchestrator_max_visual_loops` (default `2`). The full
 rulebook: [`skills/orchestrate/references/decision-policy.md`](./skills/orchestrate/references/decision-policy.md);
 the relay contract: [`skills/_shared/orchestration.md`](./skills/_shared/orchestration.md).
 
@@ -390,6 +449,52 @@ the relay contract: [`skills/_shared/orchestration.md`](./skills/_shared/orchest
 every Claude Code build resolves. If your account has the Mythos tier, change that one frontmatter
 line in `skills/orchestrate/SKILL.md` to `model: fable`. Stage-runners get each stage skill's own
 declared model; the judgment agents still follow `judgment_model`.
+
+## The visual tester (the final gate)
+
+`/sdd:visual-test <slug>` is the last stage of the pipeline — it runs **after `ship`**, on the
+running app, the way a user sees it. Unit / integration / e2e tests prove what someone wrote a test
+for; this stage finds the rest: a button hidden on a phone, a toast that never appears, a table that
+overflows in Ukrainian, a spinner that never stops, a screen that ignores the design system.
+
+```mermaid
+flowchart LR
+    IN[("spec §5 UI ACs<br/>sad §6 UI flows<br/>test-plan e2e rows<br/>architecture-map §Frontend")] --> MX["visual test matrix<br/>VT-1 … VT-n<br/>steps · expected visible outcome<br/>states · viewports"]
+    MX --> VT["visual-tester agent"]
+    VT --> DR{driver}
+    DR -- "web" --> B["browser / computer-use tool<br/>or a Playwright script"]
+    DR -- "desktop / mobile" --> CU["computer use<br/>(or the repo's UI-test driver)"]
+    DR -- "cli" --> TM["terminal output at 120 / 80 cols"]
+    B & CU & TM --> APP(["the app, started LOCALLY<br/>test accounts only"])
+    APP --> SS["screenshots — each one looked at"]
+    SS --> RP[("_visual/visual-test-date.md<br/>findings R1-VF1 …: severity · steps<br/>expected vs actual · screenshot")]
+    RP --> RS{"per finding"}
+    RS -- "Fix now" --> FX["/sdd:fix — one per finding<br/>failing test first"]
+    OK --> FV{"any Fix-now left?"}
+    FV -- no --> PASS(["final verdict VISUAL PASS<br/>roadmap → Shipped · PR note"])
+    RS -- "Accept (minor/cosmetic only)" --> OK([recorded with reason])
+    RS -- "Not a bug (cited spec line)" --> OK
+    FX --> RT([re-run visual-test])
+```
+
+- **What it checks:** every UI-observable acceptance criterion (a coverage floor — no AC is left
+  out) at every viewport (default laptop `1440x900` + phone `390x844`), the empty / loading / error /
+  success states, and a generic sweep — layout, responsive, text overflow and untranslated keys,
+  forms, visible accessibility basics, console / network errors, design-system conformance, dark
+  mode. Severity (blocker / major / minor / cosmetic) follows a fixed table:
+  [`skills/visual-test/references/checks.md`](./skills/visual-test/references/checks.md).
+- **How it drives the app:** a browser or computer-use tool when the session has one (Claude in
+  Chrome, the built-in browser, a Playwright / computer-use MCP, Windows-MCP), else a headless
+  Playwright script for the web; desktop and mobile need computer use (or the repo's own UI-test
+  driver). No driver → `VISUAL BLOCKED`, never a fake pass:
+  [`skills/visual-test/references/drivers.md`](./skills/visual-test/references/drivers.md).
+- **Safety:** local / loopback / an explicitly configured test environment only — never production,
+  never real customer data or credentials, never real payments / e-mails / third-party calls, and
+  it never edits code. Fixing is always `fix`'s job.
+- **N/A:** a feature with no visual surface (`backend-service` / `worker` / `library-sdk` only) is
+  auto-skipped with the reason.
+- **Settings:** `visual_start_cmd`, `visual_url`, `visual_viewports`, `visual_driver`,
+  `visual_test_accounts`, `model_visual_tester` (see [Configuration](#configuration--claudesddlocalmd)).
 
 ## Interview depth (easy / medium / hard)
 
@@ -537,8 +642,9 @@ Model is chosen by the **kind of work**, not by taste:
 | Research / gathering (+ web) | `sonnet` | `medium` | `researcher` (competitive / adjacent-solution research) |
 | Search / scan / derivation | `haiku` / `inherit` | `low` / `medium` | `explorer`; data-model, api, sequences, tasks |
 | Running one stage for the orchestrator | the stage skill's own `model` (passed per dispatch) | `high` | `stage-runner` |
+| Visual testing with computer use (drive the app, judge screenshots) | `sonnet` (`opus` for L/XL) | `high` | `visual-tester` |
 
-The ten agents (`agents/`): **stage-runner** (runs one stage for the orchestrator), **explorer** (brownfield scan), **test-author** (failing tests),
+The eleven agents (`agents/`): **stage-runner** (runs one stage for the orchestrator), **visual-tester** (runs the app and tests it with computer use), **explorer** (brownfield scan), **test-author** (failing tests),
 **implementer** (makes them pass), **reviewer** (independent review), **critic**
 (coherence critique), **devils-advocate** (ambiguity + failure-mode hunt), **researcher**
 (competitive / web research), **strategist** (three strategic approaches), **analyst**
@@ -601,6 +707,13 @@ orchestrator_depth: medium # easy | medium | hard — the --depth /sdd:orchestra
 orchestrator_escalate: none # none | business | hard — which UNGROUNDED questions go back to you
 orchestrator_max_review_loops: 2 # review → implement fix rounds before the orchestrator stops
 orchestrator_open_pr: true # push + open the PR after ship (false = print the command)
+orchestrator_max_visual_loops: 2 # visual-test → fix → re-test rounds before the orchestrator stops
+visual_start_cmd: ""       # empty = detect — how visual-test starts the app locally
+visual_url: ""             # empty = detect — the LOCAL / test URL it opens (never production)
+visual_viewports: [1440x900, 390x844]
+visual_driver: auto        # auto | browser-tool | playwright | computer-use
+visual_test_accounts: ""   # where test logins live — never real credentials
+model_visual_tester: sonnet
 ```
 
 Command detection is a stack-agnostic cascade: settings override → Makefile targets →
@@ -630,6 +743,7 @@ so use the **same slug at every stage**.
 /sdd:implement     checkout-discounts
 /sdd:review        checkout-discounts   # independent review of the whole change
 /sdd:ship          checkout-discounts   # verify it runs, changelog, PR
+/sdd:visual-test   checkout-discounts   # run the app with computer use, test every screen → fix findings
 ```
 
 > **`/clear` between stages** — each stage is gated, re-reads its inputs from disk, and ends by
@@ -671,7 +785,7 @@ Example — a config-toggle-sized feature (`quick` route) in one session:
 /sdd:tasks    rate-limit-bump                # never skipped: implement consumes tasks.json
 /sdd:implement rate-limit-bump               # test plan lives inline in spec.md on quick
 /sdd:review   rate-limit-bump
-/sdd:ship     rate-limit-bump
+/sdd:ship     rate-limit-bump                # a config toggle has no visual surface → visual-test auto-skips
 ```
 
 The skip conditions (`clarify` — zero open questions; `sequences` — no multi-step flow;
@@ -701,10 +815,11 @@ skipped. The ones you're most likely to meet:
 .codex-plugin/    Codex CLI plugin manifest (+ .agents/plugins/marketplace.json — its self-marketplace)
 .cursor-plugin/   Cursor plugin manifest (skills/ + agents/ auto-discovered from the root)
 install.sh        Codex CLI / Cursor installer — copies the subtree, prefixes skill names, generates functional agents
-agents/           stage-runner, explorer, test-author, implementer, reviewer, critic, devils-advocate, researcher, strategist, analyst
+agents/           stage-runner, visual-tester, explorer, test-author, implementer, reviewer, critic, devils-advocate, researcher, strategist, analyst
 scripts/          validate_plugin.py (CI gate: manifests + skill/agent frontmatter + the consistency invariants — links resolve, /sdd: form, handoff block, single-source taxonomy, no _shared orphans)
 skills/_shared/   canonical socratic-loop / critic / size-matrix / ask-style / interview-depth / diagram-presentation / surfaces / handoff / tool-adapters / orchestration (referenced, not duplicated)
-skills/orchestrate/ the autopilot: SKILL.md + references/decision-policy.md + references/implement-lead.md + templates/run.md
+skills/orchestrate/ the autopilot: SKILL.md + references/decision-policy.md + implement-lead.md + visual-fix-loop.md + templates/run.md
+skills/visual-test/ the final visual gate: SKILL.md + references/drivers.md + checks.md + templates/visual-report.md
 skills/<name>/    SKILL.md spine + references/ (heavy detail) + templates/ (output scaffolds)
 .mcp.json         declares the sdd-dashboard MCP server (auto-starts at session open; opt-in via dashboard_enabled)
 server/           the dashboard MCP server (Bun + TypeScript): server.ts (MCP stdio + Bun.serve HTTP/WS), http.ts (routing + gating, testable), state.ts (disk→pipeline derivation), channel.ts (dashboard_* tools + command allowlist), paths.ts (docs/ scoping), frontmatter.ts (shared parser) + tests/ (bun test)
@@ -733,7 +848,8 @@ where every feature stands"* has shipped — and gained a control surface. The p
 **`sdd-dashboard` MCP server** (`server/`, Bun + TypeScript) that auto-starts with every Claude Code
 session (declared in `.mcp.json`) and, when enabled, serves a **local browser dashboard** (`dashboard/`)
 on `127.0.0.1`. It reads every feature off disk (`docs/features/<slug>/`), shows its pipeline as a
-per-step checklist — `done` / `skipped` / `pending` / `blocked` — and renders each artifact (markdown +
+per-step checklist — `done` / `skipped` / `pending` / `blocked`, ending with the **visual-test** gate and
+its verdict badge — and renders each artifact (markdown +
 **mermaid** diagrams from vendored libs, fully offline; OpenAPI as plain YAML). Artifacts render in
 whatever language they're written — the state derivation reads only the English structural tokens,
 which never translate (see `artifact_language` above). Pure-markdown users who

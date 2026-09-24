@@ -2,15 +2,16 @@
 name: orchestrate
 model: opus
 effort: max
-agents: [stage-runner, explorer, critic, devils-advocate, researcher, strategist, analyst, test-author, implementer, reviewer]
+agents: [stage-runner, explorer, critic, devils-advocate, researcher, strategist, analyst, test-author, implementer, reviewer, visual-tester]
 description: >
   Use to run the WHOLE SDD pipeline autonomously from a plain-language description of what you
   want. The orchestrator (this skill — the main session on the strongest model) is the single
   decision-maker: it gives every stage to a fresh stage-runner agent (survey → specify → clarify →
-  design → sequences → data-model → api → tasks → plan-tests → implement → review → ship), answers
-  every question those agents raise, runs every sub-agent they need (critic, researcher,
-  reviewer, test-author, implementer, …), routes by size/route, loops review → implement, and
-  records every decision with its grounding in a decision ledger. Triggers on "orchestrate
+  design → sequences → data-model → api → tasks → plan-tests → implement → review → ship →
+  visual-test), answers every question those agents raise, runs every sub-agent they need (critic,
+  researcher, reviewer, test-author, implementer, visual-tester, …), routes by size/route, loops
+  review → implement and visual-test → fix (each finding fixed by its own fix agent), and records
+  every decision with its grounding in a decision ledger. Triggers on "orchestrate
   {description}", "run the whole pipeline", "build this end to end", "autopilot", "sdd autopilot",
   "/sdd:orchestrate", "take this idea to a PR", "run sdd for me and decide yourself". Never merges;
   stops at an open PR (or earlier with --until=<stage>).
@@ -18,8 +19,8 @@ description: >
 
 # Skill: orchestrate
 
-The **orchestrator** sits on top of the 19 pipeline skills. You give it a description of what you
-want; it drives the entire backbone to a reviewed, verified PR — **every stage runs in its own
+The **orchestrator** sits on top of the 20 pipeline skills. You give it a description of what you
+want; it drives the entire backbone to a reviewed, verified, **visually tested** PR — **every stage runs in its own
 agent, and the orchestrator answers every question and makes every decision**, writing each one
 to a ledger you can audit.
 
@@ -103,7 +104,8 @@ the developer's call.
    [`../_shared/size-matrix.md`](../_shared/size-matrix.md). On `standard`, the `↳ or` skip offered in
    the handoff is a decision: take it only when the N/A condition demonstrably holds (cite the file),
    and ledger it. On `quick` the stage auto-skipped already; on `full` nothing is skipped. Never skip
-   a never-skippable stage (`specify`, `design`, `tasks`, `implement`, `review`, `ship`).
+   a never-skippable stage (`specify`, `design`, `tasks`, `implement`, `review`, `ship` — and
+   `visual-test` whenever a visual surface is declared).
    **`next: glossary`** (clarify's forward handoff) → go to `design` — clarify already reconciled
    terms in-flow — unless the handoff names terms still missing from `CONTEXT.md`; then run
    `glossary` in a runner first. Ledger the choice either way.
@@ -122,20 +124,35 @@ the developer's call.
    `CHANGES REQUESTED` → an implement **fix round** over the review record's findings
    (implement-lead §Fix round), then a full `review` again. After `orchestrator_max_review_loops`
    rounds still `CHANGES REQUESTED` → **stop** and report the open findings. `PASS` → `ship`.
-9. **Ship + report.** Commit `run.md` as `orchestrate: <slug> run log` so the branch carries the
+9. **Ship + PR.** Commit `run.md` as `orchestrate: <slug> run log` so the branch carries the
    ledger. `ship` runs in a runner: it verifies the feature for real, writes the changelog (+ the
    roadmap move) and **commits them** (`ship: <slug> changelog` — the orchestrated-mode exception in
    [`../_shared/orchestration.md`](../_shared/orchestration.md)), and returns the **proposed** PR
    command without running it. The go-ahead to push + open the PR is the orchestrator's:
    `orchestrator_open_pr: true` (default) → the orchestrator pushes the feature branch (plain push,
-   never force) and runs the PR command itself; `false` → it prints the command for you. Then it
-   appends the PR link + final status to `run.md`, commits `orchestrate: <slug> final`, pushes again if
-   it opened the PR, and **emits the stage-handoff block** per
-   [`../_shared/handoff.md`](../_shared/handoff.md) (terminal variant): *What I did* (stages run /
-   skipped with reasons, commits, PR) + *Review* — **UNGROUNDED decisions first**, then still-open
-   questions, then `run.md` (ledger), `spec.md`, `sad.md`, the PR + *Run next* (**Done** — the PR
-   URL; merge is your call). On any **stop**, emit the same block with *Run next* = the exact resume
-   command (`/sdd:orchestrate <slug> --resume`) and what must change first.
+   never force) and runs the PR command itself; `false` → it keeps the command for the final report.
+10. **Visual test → fix loop (the very end).** When `target_surfaces` has a visual surface
+    (`web-frontend` / `mobile-app` / `desktop-app` / `cli`), run `visual-test` in a runner: its
+    `visual-tester` dispatch comes up as `SDD_DISPATCH` and the orchestrator runs it (the tester needs
+    the computer-use / browser tools of this session — dispatch it from here, never inline). Each
+    finding comes up as a `visual-finding` question, decided per the policy (default **Fix now**). Then
+    for every *Fix now* finding the orchestrator dispatches **its own `fix` runner** (bug report = the
+    finding verbatim: steps, expected, actual, screenshot, AC), one at a time on the feature branch;
+    after the fixes, a **`review` runner** re-checks the whole change when any fix was wide (>5 files /
+    cross-module) or touched a spec AC, and the next **`visual-test` round** re-tests. Stop after
+    `orchestrator_max_visual_loops` fix rounds (the last re-test's findings are reported, not fixed). If
+    the PR is open, push the fix commits to it; on the final `VISUAL PASS` post the runner's PR note.
+    `ship` left the roadmap item in *Now* («visual test pending»); `visual-test` moves it to Shipped on
+    `VISUAL PASS`, so a stopped run never claims Shipped. No visual surface → the stage is auto-skipped (ledgered). Full protocol →
+    [`./references/visual-fix-loop.md`](./references/visual-fix-loop.md).
+11. **Report.** Append the PR link, the final visual verdict and the status to `run.md`, commit
+    `orchestrate: <slug> final`, push again if the PR is open, and **emit the stage-handoff block** per
+    [`../_shared/handoff.md`](../_shared/handoff.md) (terminal variant): *What I did* (stages run /
+    skipped with reasons, commits, visual rounds + fixes, PR) + *Review* — **UNGROUNDED decisions
+    first**, then still-open questions and Accepted visual findings, then `run.md` (ledger), the last
+    `_visual/` report, `spec.md`, `sad.md`, the PR + *Run next* (**Done** — the PR URL; merge is your
+    call). On any **stop**, emit the same block with *Run next* = the exact resume command
+    (`/sdd:orchestrate <slug> --resume`) and what must change first.
 
 **Context hygiene.** The orchestrator holds the brief, the ledger and the runners' messages — not
 the artifacts. It reads an artifact section only to answer a question (Grep the section, don't load
@@ -148,7 +165,8 @@ tools are present, call them at each stage start/end so the panel shows the auto
 
 - A gate blocks twice, or blocks on something only a human can supply (credentials, a missing repo).
 - `--until=<stage>` reached (a normal, successful stop).
-- The review loop cap is hit, or a red task survives the escalation ladder with `stop_on_red: true`.
+- The review loop cap or the visual loop cap is hit, a `visual-test` round is `VISUAL BLOCKED` (no
+  driver / the app won't start — reported with what to install or configure), or a red task survives the escalation ladder with `stop_on_red: true`.
 - An UNGROUNDED question that the `orchestrator_escalate` policy routes to the human, when no human
   answers (headless) — record it and stop rather than invent the rule.
 - A dirty working tree at start, or a runner reports a destructive action it would need (force-push,
@@ -162,7 +180,10 @@ tools are present, call them at each stage start/end so the panel shows the auto
   choice, grounding or UNGROUNDED); every `SDD_DISPATCH` was run and its report returned verbatim.
 - `implement` ran test-first per task with gate evidence and trailers; `review` ended `PASS`
   (or the stop is reported); `ship` committed the changelog and the PR was opened (or its command
-  printed, with `orchestrator_open_pr: false`) — never merged.
+  printed, with `orchestrator_open_pr: false`) — never merged; for a visual surface the last
+  `visual-test` round's final verdict is `VISUAL PASS` (no Fix-now left; Accepted findings listed) or
+  the stop is reported, every Fix-now finding went through its own `fix` runner with a fix record
+  naming it, and the fix commits are on the feature branch (pushed to the PR when it is open).
 - `run.md` is complete; the final stage-handoff block lists UNGROUNDED decisions first.
 - **Structural self-check** ([`../_shared/self-check.md`](../_shared/self-check.md)): before the final
   handoff, re-read `run.md` and assert — ledger row count = answered question count; no stage in the
@@ -179,6 +200,8 @@ tools are present, call them at each stage start/end so the panel shows the auto
 - **Summarising agent reports** before handing them back to the runner — pass them verbatim.
 - **Loading every artifact into the orchestrator's context.** It is the decider, not the reader.
 - **Skipping a stage because it "looks trivial".** Only the N/A table in `size-matrix.md` skips.
+- **Fixing visual findings yourself.** Every Fix-now finding goes to its own `fix` runner (RED → GREEN →
+  gate → fix record); the orchestrator decides and dispatches, it does not patch code.
 - **Weakening a test, merging the PR, force-pushing** — never, at any setting.
 
 ## References & template
@@ -186,6 +209,7 @@ tools are present, call them at each stage start/end so the panel shows the auto
 [`../_shared/orchestration.md`](../_shared/orchestration.md) (relay contract) ·
 [`./references/decision-policy.md`](./references/decision-policy.md) ·
 [`./references/implement-lead.md`](./references/implement-lead.md) ·
+[`./references/visual-fix-loop.md`](./references/visual-fix-loop.md) ·
 [`./templates/run.md`](./templates/run.md) ·
 [`../_shared/agent-roster.md`](../_shared/agent-roster.md) · [`../_shared/size-matrix.md`](../_shared/size-matrix.md) ·
 [`../_shared/tool-adapters.md`](../_shared/tool-adapters.md) (Codex / Cursor: sequential, replay-only).

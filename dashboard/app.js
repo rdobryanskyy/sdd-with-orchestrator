@@ -348,9 +348,12 @@ function renderDetail() {
   if (d.reviewVerdict === 'PASS') add('pass', 'review: PASS');
   if (d.reviewVerdict === 'CHANGES REQUESTED') add('changes', 'changes requested');
   if (d.shipped) add('shipped', 'shipped');
+  if (d.visualVerdict === 'VISUAL PASS') add('pass', 'visual: PASS');
+  if (d.visualVerdict === 'VISUAL ISSUES') add('changes', 'visual issues');
+  if (d.visualVerdict === 'VISUAL BLOCKED') add('changes', 'visual blocked');
   for (const s of (d.surfaces || [])) add('surface', s);
 
-  document.getElementById('run-fix').classList.toggle('hidden', d.reviewVerdict !== 'CHANGES REQUESTED');
+  document.getElementById('run-fix').classList.toggle('hidden', d.reviewVerdict !== 'CHANGES REQUESTED' && d.visualVerdict !== 'VISUAL ISSUES');
 
   renderStepper(d);
   renderArtifactTabs(d);

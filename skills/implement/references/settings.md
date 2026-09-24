@@ -49,6 +49,13 @@ orchestrator_depth: medium # easy | medium | hard — the --depth /sdd:orchestra
 orchestrator_escalate: none # none | business | hard — which UNGROUNDED questions the orchestrator hands back to a human (none = decide all, flag UNGROUNDED)
 orchestrator_max_review_loops: 2 # integer ≥0 — review → implement fix rounds before the orchestrator stops and reports
 orchestrator_open_pr: true # true | false — after ship, the orchestrator pushes the feature branch + opens the PR (false = print the command)
+orchestrator_max_visual_loops: 2 # integer ≥0 — visual-test → fix → re-test rounds before the orchestrator stops and reports
+visual_start_cmd: ""       # empty = detect (architecture map → package scripts → Makefile …); the command that starts the app locally
+visual_url: ""             # empty = detect; the LOCAL / test URL the visual tester opens — never production
+visual_viewports: [1440x900, 390x844]   # WxH list — every web scenario runs at each
+visual_driver: auto        # auto | browser-tool | playwright | computer-use — pin the visual tester's driver
+visual_test_accounts: ""   # where test logins live (e.g. a seed file path) — never real credentials
+model_visual_tester: sonnet # model for the visual-tester agent (opus for L/XL by default)
 ```
 
 ## What each key does
@@ -72,6 +79,12 @@ orchestrator_open_pr: true # true | false — after ship, the orchestrator pushe
 - **`orchestrator_escalate`** — `none | business | hard` (default `none`). Which **UNGROUNDED** questions (nothing in the brief / artifacts / repo answers them) the orchestrator hands to a human instead of deciding: `none` — decide everything, pick the most conservative option, flag it `UNGROUNDED` and list it first in the final report; `business` — ask the human for ungrounded **business rules**; `hard` — also for ungrounded **irreversible** technical decisions. Headless with no answer → the run stops rather than guesses. Full policy → [`../../orchestrate/references/decision-policy.md`](../../orchestrate/references/decision-policy.md).
 - **`orchestrator_max_review_loops`** — integer (default `2`). How many `review → implement` fix rounds the orchestrator runs before it stops with the open findings reported.
 - **`orchestrator_open_pr`** — `true | false` (default `true`). `ship` itself only *proposes* the PR command; in an orchestrated run this key is the go-ahead: `true` → the orchestrator pushes the feature branch (plain push, never force) and runs the PR command; `false` → it prints the command and stops at a committed branch. Never merges either way.
+- **`orchestrator_max_visual_loops`** — integer (default `2`). How many `visual-test → fix → visual-test` rounds the orchestrator runs before it stops with the open visual findings reported.
+- **`visual_start_cmd` / `visual_url`** — how `visual-test` starts the app and where it opens it. Empty → detected (architecture map, then the repo's scripts; asked if still unknown). Only local / loopback / an explicitly-named test environment is ever used — a production URL is refused. → [`../../visual-test/references/drivers.md`](../../visual-test/references/drivers.md)
+- **`visual_viewports`** — the sizes every web scenario is run at (default laptop `1440x900` + phone `390x844`).
+- **`visual_driver`** — `auto` walks the driver table (a browser / computer-use tool → a Playwright script → blocked); pin one to force it.
+- **`visual_test_accounts`** — where the tester finds test logins (a seed file, a fixtures path). Scenarios needing a login nobody provided are reported `blocked`, never improvised.
+- **`model_visual_tester`** — model for the `visual-tester` agent (default `sonnet`; the skill raises it to `opus` for L/XL).
 - **`model_*` / `effort_*`** — per-role model + effort for the three agents, applied when the engine spawns them (it overrides the agent's frontmatter default). Roster defaults + rationale → [`../../_shared/agent-roster.md`](../../_shared/agent-roster.md). Precedence: env var > this setting > agent frontmatter > session.
 - **`judgment_model`** — `opus | fable` (default `opus`). One switch for **all judgment agents** — `reviewer` / `critic` / `devils-advocate` / `strategist` / `analyst` — so the judgment tier can be raised to `fable` (the Mythos-tier model) in one place, without touching `agents/*.md`. A per-role `model_<role>` key still wins for its role. Full precedence (highest wins): `env > invocation > model_<role> > judgment_model > frontmatter > session`. Execution agents (`test-author` / `implementer`) and `explorer` / `researcher` are unaffected.
   - **Env path:** the engine also exports `CLAUDE_CODE_EFFORT_LEVEL` / `CLAUDE_CODE_SUBAGENT_MODEL` for the dispatch when these keys are set — the reliable lever (see [`agent-roster.md`](../../_shared/agent-roster.md) for why frontmatter alone may not suffice).

@@ -46,6 +46,7 @@ describe('project-a', () => {
       'reviewed-pass',
       'skipped-mid',
       'spec-only',
+      'visual-tested',
     ])
   })
 
@@ -146,7 +147,7 @@ describe('project-a', () => {
     it('getRoadmap returns the markdown + the shipped slugs', () => {
       const r = getRoadmap()
       expect(r.exists).toBe(true)
-      expect(r.shipped).toEqual(['billing-export'])
+      expect(r.shipped).toEqual(['billing-export', 'visual-tested'])
       expect(r.markdown).toContain('## Shipped')
     })
   })
@@ -180,5 +181,57 @@ describe('project-empty', () => {
     setProjectDir(PROJECT_EMPTY)
     expect(listFeatures()).toEqual([])
     expect(getRoadmap()).toEqual({ exists: false, markdown: '', shipped: [] })
+  })
+})
+
+describe('visual-test stage (the final visual gate)', () => {
+  beforeEach(() => {
+    setProjectDir(PROJECT_A)
+  })
+
+  it('is the last stage, skippable, after ship', () => {
+    const f = bySlug(listFeatures(), 'billing-export')
+    const ids = f.stages.map((s) => s.id)
+    expect(ids[ids.length - 1]).toBe('visual-test')
+    expect(ids[ids.length - 2]).toBe('ship')
+    expect(f.stages[f.stages.length - 1].skippable).toBe(true)
+  })
+
+  it('a backend-only feature (no visual surface): visual-test is skipped (N/A), stage stays ship', () => {
+    const f = bySlug(listFeatures(), 'billing-export') // target_surfaces: [backend-service]
+    expect(stageStatus(f, 'visual-test')).toBe('skipped')
+    expect(f.stage).toBe('ship')
+    expect(f.visualVerdict).toBeNull()
+  })
+
+  it('a web feature not yet shipped: visual-test is blocked behind ship, not skipped', () => {
+    const f = bySlug(listFeatures(), 'in-progress') // target_surfaces includes web-frontend
+    expect(stageStatus(f, 'visual-test')).toBe('blocked')
+  })
+
+  it('a visual report counts as proof that ship ran even before the roadmap says Shipped', () => {
+    const f = bySlug(listFeatures(), 'visual-tested')
+    expect(stageStatus(f, 'ship')).toBe('done')
+  })
+
+  it('a _visual/visual-test-*.md report marks the stage done and reads the LATEST verdict', () => {
+    const f = bySlug(listFeatures(), 'visual-tested')
+    expect(stageStatus(f, 'visual-test')).toBe('done')
+    expect(stageStatus(f, 'ship')).toBe('done')
+    expect(f.stage).toBe('visual-test')
+    // round 1 (…-06-03.md) = ISSUES, round 2 (…-06-03-r2.md) = PASS → the r2 file is the latest
+    expect(f.visualVerdict).toBe('VISUAL PASS')
+  })
+
+  it('a same-day re-review (-r2) is the latest review, not the first run', () => {
+    const f = bySlug(listFeatures(), 'visual-tested')
+    // review-2026-05-20.md = CHANGES REQUESTED, review-2026-05-20-r2.md = PASS
+    expect(f.reviewVerdict).toBe('PASS')
+  })
+
+  it('lists _visual/ reports as Visual artifacts', () => {
+    const d = getFeatureDetail('visual-tested')
+    const labels = (d?.artifacts ?? []).map((a) => a.label)
+    expect(labels).toContain('Visual · visual-test-2026-06-03-r2.md')
   })
 })

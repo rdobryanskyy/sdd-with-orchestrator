@@ -51,9 +51,16 @@ See `brief.md` in this folder (verbatim). One-line intent: <the orchestrator's o
 |---|---|---|---|
 | 1 | CHANGES REQUESTED / PASS | <n> | R1-F1, R1-F2 |
 
+## Visual rounds
+
+| Round | Verdict | Findings (b/M/m/c) | Fix now | Fix records + commits | Re-review |
+|---|---|---|---|---|---|
+| 1 | VISUAL ISSUES / VISUAL PASS / VISUAL BLOCKED | 0/1/2/0 | VF-1, VF-2 | `_fixes/<date>-<short>.md` (<sha>) | yes / no |
+
 ## Outcome
 
 - Status: <done | stopped — reason>
 - PR: <url or the command to open it>
 - **UNGROUNDED decisions to review first:** D-0nn, D-0nn
+- Final visual verdict: <VISUAL PASS | … | N/A — no visual surface> · Accepted visual findings: VF-n (<reason>)
 - Resume (if stopped): `/sdd:orchestrate <slug> --resume` after <what must change>

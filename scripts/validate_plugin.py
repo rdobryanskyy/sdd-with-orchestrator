@@ -387,7 +387,7 @@ def main() -> int:
               f"{rel} never mentions 'artifact_language' — the settings doc and the shared rule must both carry it")
     ARTIFACT_WRITERS = ("specify", "clarify", "glossary", "design", "decide-adr", "sequences",
                         "data-model", "api", "tasks", "plan-tests", "review", "ship", "fix",
-                        "roadmap", "survey")
+                        "roadmap", "survey", "visual-test")
     for name in ARTIFACT_WRITERS:
         check("artifact-language.md" in (ROOT / "skills" / name / "SKILL.md").read_text(),
               f"skills/{name}/SKILL.md points at _shared/artifact-language.md",

@@ -2,7 +2,7 @@
 name: stage-runner
 description: >
   Runs exactly ONE SDD pipeline stage (survey, specify, clarify, design, sequences, data-model, api,
-  tasks, plan-tests, implement plan/finalize, review, ship, or a utility) on behalf of the
+  tasks, plan-tests, implement plan/finalize, review, ship, visual-test, fix, or a utility) on behalf of the
   orchestrator, in ORCHESTRATED MODE. Follows skills/<stage>/SKILL.md verbatim, but never asks the
   human and never spawns sub-agents: every AskUserQuestion becomes an SDD_QUESTIONS message and
   every sub-agent dispatch becomes an SDD_DISPATCH message returned to the orchestrator, which

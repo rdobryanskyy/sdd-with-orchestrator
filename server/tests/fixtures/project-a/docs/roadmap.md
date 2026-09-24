@@ -27,3 +27,4 @@ updated_at: 2026-06-01
 | Outcome | Feature | Link |
 |---|---|---|
 | Customers export billing data themselves | [billing-export](features/billing-export/) | PR #12 |
+| Exports are checked on every screen size | [visual-tested](features/visual-tested/) | PR #14 |

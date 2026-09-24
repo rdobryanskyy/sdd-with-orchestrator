@@ -32,6 +32,7 @@ describe('buildCommand allowlist', () => {
     expect(() => buildCommand('rm', 'x')).toThrow(/not allowed/)
     expect(() => buildCommand('start', 'x')).toThrow(/not allowed/) // deliberately not driveable
     expect(SKILL_NAMES.has('implement')).toBe(true)
+    expect(SKILL_NAMES.has('visual-test')).toBe(true)
   })
 
   it('rejects injection through the skill name', () => {

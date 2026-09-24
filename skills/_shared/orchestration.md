@@ -39,7 +39,9 @@ file read, not an agent spawn.
 **Commits.** Where a skill *proposes* a commit, the runner **makes** it with the proposed message,
 so every stage's work is committed — possibly as several commits (`design` commits a bootstrap,
 then one per section, then the finalisation; inline `glossary` / `roadmap` add their own).
-`auto_commit` governs only the `implement` engine's task commits, not stage commits. The `implement` engine's per-task
+`auto_commit` governs only the `implement` engine's task commits, not stage commits. A record field
+that wants its own commit's sha (the fix record's `commit:`) is written as `see SDD-Fix trailer` —
+the trailer is the link; a runner never amends and never leaves the tree dirty to fill it in. The `implement` engine's per-task
 commits are made by the orchestrator (it is the engine lead — see
 [`../orchestrate/references/implement-lead.md`](../orchestrate/references/implement-lead.md)).
 
@@ -55,7 +57,8 @@ SDD_QUESTIONS:
   questions:                    # 1–4 per message; batch only questions that are independent
     - id: design.s5.module-boundary      # stable: <stage>.<section>.<short> — reused on replay
       kind: socratic            # depth | size-route | calibration | socratic | blast-radius | critic | clarify-finding
-                                # | review-finding | glossary-definition | test-level | channel | ledger-veto | other
+                                # | review-finding | glossary-definition | test-level | visual-finding | fix-intake
+                                # | fix-spec-patch | visual-launch | channel | ledger-veto | other
       reversibility: hard       # easy | hard  (hard = irreversible / multi-module / public contract)
       business_rule: false      # true when the answer defines product/domain behaviour, not tech
       question: "<the full CONTEXT / WHY IT MATTERS / READ OPTIONS text, per ask-style.md>"
@@ -88,7 +91,8 @@ SDD_DISPATCH:
 SDD_STAGE_DONE:
   stage: specify
   slug: checkout-discounts
-  outcome: done                 # done | plan (implement phase=plan) | PASS | CHANGES REQUESTED (review — the verdict literals)
+  outcome: done                 # done | plan (implement phase=plan) | PASS | CHANGES REQUESTED (review)
+                                # | VISUAL PASS | VISUAL ISSUES | VISUAL BLOCKED (visual-test) — the verdict literals
   files: [docs/features/checkout-discounts/spec.md, docs/features/checkout-discounts/.size, docs/features/checkout-discounts/.route]
   commits: ["<sha> spec: checkout-discounts"]       # every commit this stage made, in order ([] if none)
   pr_command: null              # ship only: the proposed PR command, NOT run
@@ -180,5 +184,5 @@ re-reads `run.md` instead of relying on conversation history.
   and the orchestrator's own context holds only reports, questions and the ledger.
 - **Independence preserved.** `critic` / `devils-advocate` / `reviewer` are still dispatched with a
   clean context by the orchestrator; the runner that wrote the draft never grades it.
-- **No skill rewrites.** The redirection lives here and in the runner; the 19 stage skills remain
-  valid interactive skills.
+- **No skill rewrites.** The redirection lives here and in the runner; every stage skill remains a
+  valid interactive skill.

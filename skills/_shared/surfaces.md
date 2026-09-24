@@ -162,5 +162,8 @@ visual-regression tool / etc.) from the repo, exactly as it already does for the
   auto-serialized — UI tasks can parallelize).
 - **`plan-tests`** — adds the component / visual-regression / e2e-through-UI tiers when a UI surface
   is declared.
+- **`visual-test`** — runs only for a visual surface (`web-frontend` / `mobile-app` / `desktop-app` →
+  screens driven by computer use / a browser; `cli` → rendered terminal output); picks its driver and
+  viewports per surface; a backend-only feature auto-skips it.
 - **`review`** — the end-to-end AC trace spans UI surfaces (a UI AC traces to a component /
   e2e-through-UI test), not only backend.

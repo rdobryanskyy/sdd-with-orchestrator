@@ -30,7 +30,7 @@ The engineer on the bug (drives). PM / Tech Lead is consulted only when triage l
 ## Inputs
 
 - `<slug>` — optional; pass it when you know which feature owns the bug, otherwise step 2 finds it from the symptom.
-- The bug report, in any form — a sentence, a stack trace, a failing request, a screenshot description.
+- The bug report, in any form — a sentence, a stack trace, a failing request, a screenshot description. A **visual-test finding** (`R<n>-VF<k>` from `_visual/visual-test-*.md`: steps, expected, actual, screenshot, AC) is a complete report — intake asks nothing more; read the screenshot, pin the bug with the lowest-level test that reproduces it (a component / e2e-through-UI test for a UI defect), and set the fix record's `finding:` to that id. Invoked with **only a slug** (e.g. the dashboard's ⚒ Fix button) → take the **open** *Fix now* findings of the latest `_visual/visual-test-*.md` — open = no `_fixes/*.md` has `finding:` naming its id — (or of the latest `CHANGES REQUESTED` review) as the reports, one fix per finding, most severe first.
 - **Soft gate (never hard-refuse):** `docs/features/` with ≥1 `spec.md`. Absent (a brownfield repo that never ran the backbone) → still run, in **no-spec mode**: steps 1 → 3 → 4 → record, skip the spec patch, and recommend `/sdd:survey` in the handoff.
 - (Optional) `.claude/sdd.local.md` — gate command overrides; otherwise the commands are detected per `implement`'s cascade.
 

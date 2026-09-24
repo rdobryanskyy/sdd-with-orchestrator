@@ -30,6 +30,7 @@ export const SKILL_NAMES = new Set([
   'ship',
   'fix',
   'roadmap',
+  'visual-test',
 ])
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/
@@ -149,7 +150,7 @@ export const DASHBOARD_TOOLS: ToolDef[] = [
       type: 'object',
       properties: {
         slug: { type: 'string' },
-        stage: { type: 'string', description: 'skill id: specify|design|sequences|data-model|api|tasks|plan-tests|implement|review|ship' },
+        stage: { type: 'string', description: 'skill id: specify|design|sequences|data-model|api|tasks|plan-tests|implement|review|ship|visual-test' },
         status: { type: 'string', enum: ['started', 'working', 'done', 'blocked'] },
         progress: {
           type: 'object',
@@ -212,7 +213,7 @@ export const DASHBOARD_TOOLS: ToolDef[] = [
         slug: { type: 'string' },
         stage: { type: 'string' },
         summary: { type: 'string', description: 'what this stage did (the handoff "What I did")' },
-        verdict: { type: 'string', enum: ['PASS', 'CHANGES REQUESTED'] },
+        verdict: { type: 'string', enum: ['PASS', 'CHANGES REQUESTED', 'VISUAL PASS', 'VISUAL ISSUES', 'VISUAL BLOCKED'] },
         review_files: { type: 'array', items: { type: 'string' }, description: 'docs/features/<slug>/… paths to review' },
         next_command: { type: 'string', description: 'the next /sdd:<skill> <slug> line' },
       },

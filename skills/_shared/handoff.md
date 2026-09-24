@@ -85,8 +85,11 @@ Rules for filling it:
   runs.
 - **Loop-back** (`review → implement` on `CHANGES REQUESTED`): **no `/clear`** — you stay in context
   to iterate; *Run next* = `/sdd:implement <slug>` (fix), then re-review the changed surface.
-- **Terminal** (`ship`): there is no `/sdd` successor. *Run next* becomes **Done** — the PR command/URL
-  + «merging to main is your call»; still print *What I did* + *Review* (the changelog + PR).
+- **Terminal** (`visual-test`, or `ship` when the feature has no visual surface): there is no `/sdd`
+  successor. *Run next* becomes **Done** — the PR command/URL + «merging to main is your call»; still
+  print *What I did* + *Review* (the changelog + PR, or the visual report). `ship` on a feature *with*
+  a visual surface is a forward handoff to `/sdd:visual-test <slug>`; `visual-test` with *Fix now*
+  findings hands off to one `/sdd:fix <slug> "<R<n>-VF<k> …>"` per finding, then a re-run of itself.
 - **Utility** (`classify-size`, `glossary`, `decide-adr`, `roadmap`, `fix`): called ad-hoc, not a
   gate. `/clear` is **optional** (recommend it only if the context is large); *Run next* = «resume
   your backbone stage», naming the likely one (e.g. `/sdd:design <slug>`). Print *What I did* +
@@ -109,7 +112,8 @@ Rules for filling it:
 | `plan-tests` | `test-plan.md` (or `spec.md` `## Test plan` for XS/S) | `/sdd:implement <slug>` |
 | `implement` | the committed diff (code + tests) + `tasks/tracker.md` | `/sdd:review <slug>` |
 | `review` | `_review/review-<date>.md` | `/sdd:ship <slug>` (PASS) · `/sdd:implement <slug>` (CHANGES, no `/clear`) |
-| `ship` | `CHANGELOG` + the PR | **Done** — PR command/URL; merge is your call |
+| `ship` | `CHANGELOG` + the PR | `/sdd:visual-test <slug>` (visual surface) · **Done** — PR command/URL (no visual surface) |
+| `visual-test` | `_visual/visual-test-<date>.md` + finding screenshots (+ `docs/roadmap.md` on PASS) | **Done** (VISUAL PASS) · `/sdd:fix <slug> "<R<n>-VF<k>>"` per Fix-now finding, then `/sdd:visual-test <slug>` (VISUAL ISSUES) · install/configure what's missing, then `/sdd:visual-test <slug>` (VISUAL BLOCKED) |
 | `classify-size` | `.size` + `.route` | resume — e.g. `/sdd:specify <slug>` |
 | `glossary` | `CONTEXT.md` | resume — e.g. `/sdd:design <slug>` |
 | `decide-adr` | `adr/NNNN-<title>.md` | resume — `/sdd:tasks <slug>` or `/sdd:plan-tests <slug>` |

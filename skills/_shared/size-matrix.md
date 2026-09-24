@@ -84,12 +84,13 @@ schema change still runs `data-model` — on every route.
 | `sequences` | **one actor and no multi-step runtime flow** — a single request/response or a pure rule change; nothing an `alt`-branch diagram would reveal | `design`'s handoff |
 | `data-model` | **no schema change** — no new entity, column, index, or migration | `sequences`' handoff |
 | `api` | **no contract change** — no new/changed endpoint, event, CLI command, or public signature (the skill also self-skips on «no external interface»). `api` **accepts a legally-skipped `data-model`** (no schema change) — it derives from the existing schema; its hard gate fires only when a schema change exists | `data-model`'s handoff |
+| `visual-test` | **no visual surface** — `target_surfaces` has none of `web-frontend` / `mobile-app` / `desktop-app` / `cli` (the skill self-skips with the reason). Not route-dependent: with a visual surface it runs on every route | `ship`'s handoff |
 | `plan-tests` | never fully skipped — it **collapses to the inline `## Test plan`** in `spec.md` (cheap; always inline on `quick`); skip entirely only when every task's DoD already names its test | `tasks`' handoff |
 
 **Never skippable — on any route:** `specify` (the spec is the trace anchor), `design` (declares
 `target_surfaces` + the ADR gate), `tasks` (`implement` consumes `tasks.json`), `implement`,
-`review`, `ship`. The shortest legal route is therefore
-`specify → design → tasks → implement → review → ship` — a `quick` XS feature closes in one session.
+`review`, `ship` — and `visual-test` whenever a visual surface is declared. The shortest legal route is therefore
+`specify → design → tasks → implement → review → ship` (+ `visual-test` for a visual surface) — a `quick` XS feature closes in one session.
 
 When several consecutive stages are N/A, walk the conditions in order at each handoff and jump to
 the first stage whose condition does **not** hold (skipping `sequences` moves its `data-model`

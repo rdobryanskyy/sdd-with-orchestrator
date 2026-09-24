@@ -3,7 +3,8 @@ slug: <slug>
 date: <YYYY-MM-DD>
 triage: <regression | spec-bug | gap | no-spec>
 acs: [<AC-NN>]            # the AC(s) traced; empty list for no-spec
-commit: <sha>             # filled after the fix commit lands
+commit: <sha>             # filled after the fix commit lands — or `see SDD-Fix trailer` when a later commit is impossible (orchestrated runs never amend)
+finding: <none | R<n>-VF<k>>  # the visual-test finding (or review finding) this fix closes
 recurrence_of: <none | _fixes/<date>-<short>.md>
 ---
 
