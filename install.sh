@@ -14,7 +14,7 @@
 #   codex | cursor   target tool (claude just prints the native /plugin commands)
 #   --global         install under $HOME instead of the current directory
 #   --prefix DIR     install under DIR (overrides --global and $PWD; mainly for testing)
-#   --ref REF        git ref of rdobryanskyy/sdd to download (default: main)
+#   --ref REF        git ref of rdobryanskyy/sdd-with-orchestrator to download (default: main)
 #   --src DIR        install from a local checkout instead of downloading
 #   --uninstall      remove a previous install from the chosen prefix and exit
 #
@@ -23,7 +23,7 @@
 
 set -euo pipefail
 
-REPO="rdobryanskyy/sdd"
+REPO="rdobryanskyy/sdd-with-orchestrator"
 
 log()  { printf '%s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
@@ -60,7 +60,7 @@ if [ "$TOOL" = "claude" ]; then
   cat <<'EOF'
 SDD installs natively in Claude Code — run inside a Claude Code session:
 
-  /plugin marketplace add rdobryanskyy/sdd
+  /plugin marketplace add rdobryanskyy/sdd-with-orchestrator
   /plugin install sdd@sdd
 EOF
   exit 0

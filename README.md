@@ -16,11 +16,15 @@ dial decides how much the skill decides for you vs. interrogates you with trade-
 **Claude Code** — native plugin:
 
 ```text
-/plugin marketplace add rdobryanskyy/sdd
+/plugin marketplace add rdobryanskyy/sdd-with-orchestrator
 /plugin install sdd@sdd
 ```
 
 After updating to a new release: re-run `/plugin install sdd@sdd`, then `/reload-plugins`.
+
+> **Coming from the original `rdobryanskyy/sdd`?** This fork keeps the same plugin and marketplace
+> name (`sdd`), so every `/sdd:…` command is unchanged — but only one `sdd` marketplace can be
+> registered at a time. Remove the old one first: `/plugin marketplace remove sdd`, then add this one.
 
 **Codex CLI** — `cd` into your project first: the script installs into the **current directory**
 (`.agents/skills/` + `.codex/agents/`). Add `--global` after `codex` to install under `~` instead,
@@ -28,7 +32,7 @@ or `--prefix DIR` to install under an arbitrary directory (useful for trying it 
 
 ```sh
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/rdobryanskyy/sdd/main/install.sh | bash -s -- codex
+curl -fsSL https://raw.githubusercontent.com/rdobryanskyy/sdd-with-orchestrator/main/install.sh | bash -s -- codex
 ```
 
 Then restart codex (skills are discovered at session start) and type `$sdd-specify`.
@@ -37,7 +41,7 @@ Alternative — the plugin marketplace. Note that `add` only **registers** the m
 installs nothing by itself:
 
 ```text
-codex plugin marketplace add rdobryanskyy/sdd
+codex plugin marketplace add rdobryanskyy/sdd-with-orchestrator
 ```
 
 then **inside codex** run `/plugins`, switch to the `sdd` marketplace tab and pick
@@ -60,7 +64,7 @@ The script warns when it detects a marketplace install already registered.
 
 ```sh
 cd your-project
-curl -fsSL https://raw.githubusercontent.com/rdobryanskyy/sdd/main/install.sh | bash -s -- cursor
+curl -fsSL https://raw.githubusercontent.com/rdobryanskyy/sdd-with-orchestrator/main/install.sh | bash -s -- cursor
 ```
 
 Then restart Cursor (or run **Developer: Reload Window**) and invoke a stage by typing `/` in
