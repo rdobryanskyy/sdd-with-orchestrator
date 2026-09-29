@@ -50,6 +50,7 @@ orchestrator_escalate: none # none | business | hard — which UNGROUNDED questi
 orchestrator_max_review_loops: 2 # integer ≥0 — review → implement fix rounds before the orchestrator stops and reports
 orchestrator_open_pr: true # true | false — after ship, the orchestrator pushes the feature branch + opens the PR (false = print the command)
 orchestrator_max_visual_loops: 2 # integer ≥0 — visual-test → fix → re-test rounds before the orchestrator stops and reports
+orchestrator_ci_timeout_min: 30 # integer — how long /sdd:orchestrator's QA gate watches the PR's CI before recording it pending
 visual_start_cmd: ""       # empty = detect (architecture map → package scripts → Makefile …); the command that starts the app locally
 visual_url: ""             # empty = detect; the LOCAL / test URL the visual tester opens — never production
 visual_viewports: [1440x900, 390x844]   # WxH list — every web scenario runs at each
@@ -80,6 +81,7 @@ model_visual_tester: sonnet # model for the visual-tester agent (opus for L/XL b
 - **`orchestrator_max_review_loops`** — integer (default `2`). How many `review → implement` fix rounds the orchestrator runs before it stops with the open findings reported.
 - **`orchestrator_open_pr`** — `true | false` (default `true`). `ship` itself only *proposes* the PR command; in an orchestrated run this key is the go-ahead: `true` → the orchestrator pushes the feature branch (plain push, never force) and runs the PR command; `false` → it prints the command and stops at a committed branch. Never merges either way.
 - **`orchestrator_max_visual_loops`** — integer (default `2`). How many `visual-test → fix → visual-test` rounds the orchestrator runs before it stops with the open visual findings reported.
+- **`orchestrator_ci_timeout_min`** — integer (default `30`). Read only by `/sdd:orchestrator`'s QA gate: how long it watches the open PR's CI checks before recording them `pending` (a pending CI is never reported as `QA PASS`). → [`../../orchestrator/references/qa-gate.md`](../../orchestrator/references/qa-gate.md)
 - **`visual_start_cmd` / `visual_url`** — how `visual-test` starts the app and where it opens it. Empty → detected (architecture map, then the repo's scripts; asked if still unknown). Only local / loopback / an explicitly-named test environment is ever used — a production URL is refused. → [`../../visual-test/references/drivers.md`](../../visual-test/references/drivers.md)
 - **`visual_viewports`** — the sizes every web scenario is run at (default laptop `1440x900` + phone `390x844`).
 - **`visual_driver`** — `auto` walks the driver table (a browser / computer-use tool → a Playwright script → blocked); pin one to force it.

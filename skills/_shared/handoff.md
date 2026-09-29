@@ -119,6 +119,7 @@ Rules for filling it:
 | `decide-adr` | `adr/NNNN-<title>.md` | resume — `/sdd:tasks <slug>` or `/sdd:plan-tests <slug>` |
 | `roadmap` | `docs/roadmap.md` | resume your backbone stage |
 | `orchestrate` | `_orchestrator/run.md` (ledger — UNGROUNDED decisions first) + every stage's files + the PR | **Done** — PR URL; or on a stop, `/sdd:orchestrate <slug> --resume` |
+| `orchestrator` | `_orchestrator/qa-signoff.md` + `run.md` (UNGROUNDED first) + the last `_visual/` report + the PR | **Done** — PR URL (review PASS · VISUAL PASS · QA PASS · CI green); or on a stop, `/sdd:orchestrator <slug> --resume` |
 | `fix` | `_fixes/<date>-<short>.md` + the diff (+ the spec patch if any) | resume — or `/sdd:review <slug>` when the fix was wide (>5 files / cross-module) |
 
 The `↳ or` cells above show the `standard`-route rendering; on `quick` the stage auto-skips (and
@@ -129,7 +130,7 @@ the `↳ or` inverts), on `full` the `↳ or` line is dropped — per the *Route
 When a stage runs inside a `stage-runner` for the orchestrator (`ORCHESTRATED MODE`,
 [`orchestration.md`](./orchestration.md)), the block is produced exactly as above but **returned** inside
 `SDD_STAGE_DONE.handoff` instead of printed for a human; the orchestrator routes on it (the fresh
-runner per stage *is* the `/clear`). The `orchestrate` skill itself prints the terminal variant at the end.
+runner per stage *is* the `/clear`). The `orchestrate` skill (and `orchestrator`, which wraps it) prints the terminal variant at the end.
 
 ## Discipline
 

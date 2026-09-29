@@ -62,5 +62,6 @@ See `brief.md` in this folder (verbatim). One-line intent: <the orchestrator's o
 - Status: <done | stopped — reason>
 - PR: <url or the command to open it>
 - **UNGROUNDED decisions to review first:** D-0nn, D-0nn
+- QA verdict (only under `/sdd:orchestrator`): <QA PASS | QA FAIL — reason | n/a> · `qa-signoff.md`
 - Final visual verdict: <VISUAL PASS | … | N/A — no visual surface> · Accepted visual findings: VF-n (<reason>)
 - Resume (if stopped): `/sdd:orchestrate <slug> --resume` after <what must change>

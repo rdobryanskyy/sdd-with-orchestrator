@@ -1,7 +1,7 @@
 # SDD — Spec-Driven Development for Claude Code
 
 A self-contained Claude Code plugin that carries a feature from a one-line idea to
-**reviewed, verified, shipped** code through **21 atomic, stack-agnostic skills** and a
+**reviewed, verified, shipped** code through **22 atomic, stack-agnostic skills** and a
 **TDD implementation engine** — with a living roadmap above the per-feature flow, and an
 **orchestrator** that can drive the whole thing for you from a plain-language description.
 
@@ -78,9 +78,15 @@ engine modes — maps to Codex / Cursor is one table:
 
 ## Start here
 
-Two ways to drive the pipeline:
+Three ways to drive the pipeline:
 
-- **Autopilot — `/sdd:orchestrate "<what you want>"`.** You describe the feature once; the
+- **Finish it for me — `/sdd:orchestrator <what you need>`.** One command, then walk away. It asks
+  the few things only you can supply **up front** (dirty tree, how to start the app, a visual
+  driver), runs the whole pipeline below unattended, and only calls it done after a **QA gate**:
+  full regression on the final head, every AC mapped to a passing test (+ a passing visual scenario
+  for UI ACs) audited by a clean-context reviewer, and the PR's CI green
+  ([details](#sdd-orchestrator--finish-it-for-me)).
+- **Autopilot, controlled — `/sdd:orchestrate "<what you want>"`.** You describe the feature once; the
   orchestrator (strongest model) gives every stage to its own agent, answers every question the
   stages ask, and stops at an open PR with a **decision ledger** you audit
   ([details + diagrams below](#the-orchestrator-autopilot)).
@@ -236,6 +242,24 @@ review → implement, and writes every decision with its grounding into a **deci
 /sdd:orchestrate mileage-export "…" --until=tasks        # plan-only: stop before any code
 /sdd:orchestrate mileage-export --resume                 # continue a stopped run from run.md
 ```
+
+### `/sdd:orchestrator` — finish it for me
+
+The front door over the same engine. `orchestrate` is the engine you can steer (`--until`,
+`--from`); `orchestrator` is the "take all responsibility and finish it" preset:
+
+```text
+/sdd:orchestrator Let fleet customers export their monthly mileage report as CSV from the portal
+/sdd:orchestrator mileage-export --brief=docs/tickets/FLEET-412.md --depth=hard
+/sdd:orchestrator mileage-export --resume
+```
+
+| Phase | What happens |
+|---|---|
+| **Intake** | ≤4 questions, only for what a probe couldn't resolve: dirty tree (carry onto the feature branch / stop), app start command + URL, no visual driver. Forge auth is checked (no auth → PR command printed). Then no more questions. |
+| **Engine** | `orchestrate` steps 1–10 unchanged, preset: no `--until`, PR opened, review + visual loops ≥3, `escalate: none` (every later decision ledgered, UNGROUNDED flagged). |
+| **QA gate** | Full regression, every tier, on the final head (fix commits land after review) → AC evidence matrix (test · result · ship check · `VT-n`) → clean-context `reviewer` audit → one QA fix round for gaps → PR CI watched ([`qa-gate.md`](./skills/orchestrator/references/qa-gate.md)). Writes `_orchestrator/qa-signoff.md`, comments on the PR. |
+| **Done** | review `PASS` · `VISUAL PASS` (or no UI) · `QA PASS` · CI green · PR open. Never merged. Anything less is a reported stop with a `--resume` command. |
 
 ### Who does what
 

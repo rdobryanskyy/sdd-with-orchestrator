@@ -11,10 +11,11 @@ description: >
   visual-test), answers every question those agents raise, runs every sub-agent they need (critic,
   researcher, reviewer, test-author, implementer, visual-tester, …), routes by size/route, loops
   review → implement and visual-test → fix (each finding fixed by its own fix agent), and records
-  every decision with its grounding in a decision ledger. Triggers on "orchestrate
-  {description}", "run the whole pipeline", "build this end to end", "autopilot", "sdd autopilot",
-  "/sdd:orchestrate", "take this idea to a PR", "run sdd for me and decide yourself". Never merges;
-  stops at an open PR (or earlier with --until=<stage>).
+  every decision with its grounding in a decision ledger. The engine behind `/sdd:orchestrator`
+  (the one-shot, finish-it-for-me front door with intake + QA gate); call it directly for partial or
+  controlled runs. Triggers on "orchestrate {description}", "run the whole pipeline",
+  "/sdd:orchestrate", "plan-only run", "orchestrate until {stage}", "run sdd for me and decide
+  yourself". Never merges; stops at an open PR (or earlier with --until=<stage>).
 ---
 
 # Skill: orchestrate
@@ -23,6 +24,10 @@ The **orchestrator** sits on top of the 20 pipeline skills. You give it a descri
 want; it drives the entire backbone to a reviewed, verified, **visually tested** PR — **every stage runs in its own
 agent, and the orchestrator answers every question and makes every decision**, writing each one
 to a ledger you can audit.
+
+> **Want it finished, not driven?** [`/sdd:orchestrator`](../orchestrator/SKILL.md) runs this engine
+> with a full-delivery preset, asks everything human up front, and adds a final QA gate (full
+> regression, AC evidence matrix, PR CI). Use `orchestrate` directly for `--until` / `--from` runs.
 
 It does not replace or rewrite any stage: each stage skill runs unchanged inside a
 [`stage-runner`](../../agents/stage-runner.md) agent in `ORCHESTRATED MODE`, which hands its
