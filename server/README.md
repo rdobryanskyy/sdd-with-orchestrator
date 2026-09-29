@@ -117,6 +117,7 @@ Environment overrides (handy for testing / unusual setups):
 | Symptom | Fix |
 |---|---|
 | `/mcp` shows `sdd-dashboard` **failed** | Bun isn't installed (the `.mcp.json` launches `bun`). Install Bun, reopen the session. |
+| `sdd-dashboard` **failed** when this repo is opened directly (not as a plugin) | Fixed: `.mcp.json` now falls back to `$CLAUDE_PROJECT_DIR`/cwd when `${CLAUDE_PLUGIN_ROOT}` isn't set. Pull the latest version and reopen the session. |
 | `/sdd:start` says **"not enabled"** | Set `dashboard_enabled: true` in `.claude/sdd.local.md`, re-run `/sdd:start`. |
 | Browser shows **"no token in URL"** | Open the exact URL `/sdd:start` printed (the token authorises the session). |
 | **"project dir unresolved"** | Run `/sdd:start` inside the project (it hands the real path over), or set `CLAUDE_PROJECT_DIR`. |
